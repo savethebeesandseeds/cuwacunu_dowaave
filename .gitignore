@@ -1,0 +1,6 @@
+lightning_logs/
+optuna_test/
+__pycache__/
+index.html
+model_no_tunning.pkl
+test_study.pkl

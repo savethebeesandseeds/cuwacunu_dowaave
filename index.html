@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script type="text/javascript">
+    function getPageContents(callback,url,params) {
+        console.log(`getPageContents url ::: ${url}`);
+        let http = new XMLHttpRequest();
+        if(params!=null) {
+            http.open('POST', url, true);
+            http.setRequestHeader('Content-type', 'application/');
+        } else {
+            http.open('GET', url, true);
+        }
+        http.onreadystatechange = function() {
+            callback(http.responseText);    
+        }
+        http.send(params);
+    }
+    var homeurlfile = './src/homeurl.txt';
+    var homeurl = []
+    getPageContents(function(result) {
+        console.log(`fetch result ::: ${result}`);
+        homeurl = result.split('\n');
+        homeurl = homeurl.filter(function (el) {
+            return el != '';
+        });
+        homeurl = homeurl[0];
+        console.log(`fetch homeurl ::: ${homeurl}`);
+    }, homeurlfile, null);
+    function onreadyFun () {
+        console.log(`waka ready, with homeurl ::: ${homeurl}`);
+    }
+    window.onload = onreadyFun();
+</script>
+</head>
+<body>
+
+<h1>My First Heading</h1>
+<p>My first paragraph.</p>
+
+</body>
+</html>
