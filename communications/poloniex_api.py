@@ -59,10 +59,10 @@ class EXCHANGE_INSTRUMENT:
             self.market_instrument = self.rest_client.market_api()
             self.trade_instrument = self.rest_client.trade_api()
             self.user_instrument = self.rest_client.user_api()
-            loop=asyncio.get_event_loop()
             # loop = asyncio.new_event_loop()
             # asyncio.set_event_loop(loop)
             if(_message_wrapper_ is not None):
+                loop=asyncio.get_event_loop()
                 loop.run_until_complete(self._connect_socket_())
                 if(_websocket_subs is not None):
                     for _wss in _websocket_subs:
@@ -78,14 +78,19 @@ class EXCHANGE_INSTRUMENT:
             self.market_instrument = self.rest_client.market_api()
             self._farm_files = {}
             self._initialize_ticker_data_farm_()
+            self._second_message_wrapper_=_message_wrapper_
             self.ws_farm_client = WsClient(\
-                self._farm_on_message_ if _message_wrapper_ is None else _message_wrapper_, 
+                # self._farm_on_message_ if _message_wrapper_ is None else _message_wrapper_, 
+                self._farm_on_message_, 
                 key=rcsi_utils.RCsi_CRYPT(communications_config.PLX_FUT_ADA_CONFIG.RCsi_KEY,communications_config.PLX_FUT_ADA_CONFIG.API_KEY), 
                 secret=rcsi_utils.RCsi_CRYPT(communications_config.PLX_FUT_ADA_CONFIG.RCsi_KEY,communications_config.PLX_FUT_ADA_CONFIG.API_SECRET), 
                 passphrase=rcsi_utils.RCsi_CRYPT(communications_config.PLX_FUT_ADA_CONFIG.RCsi_KEY,communications_config.PLX_FUT_ADA_CONFIG.API_PASS)
             )
             loop=asyncio.get_event_loop()
             loop.run_until_complete(self._connect_socket_())
+            if(_websocket_subs is not None):
+                for _wss in _websocket_subs:
+                    loop.run_until_complete(self._subcribe_websocket_(_wss))
             for _farm_itm in dwvc.CWCN_FARM_CONFIG.FARM_SYMBOLS:
                 loop.run_until_complete(self._subcribe_websocket_('/contractMarket/ticker:{}'.format(_farm_itm)))
             # loop = asyncio.new_event_loop()
@@ -124,7 +129,8 @@ class EXCHANGE_INSTRUMENT:
                 sys.stdout.flush()
             except Exception as e:
                 print("error! {}".format(e))
-        
+        if(self._second_message_wrapper_ is not None):
+            self._second_message_wrapper_(msg)
     # def _on_message_(self,msg):
     #     if msg['topic'] == f'/contract/instrument:{dwvc.CWCN_INSTRUMENT_CONFIG.SYMBOL}':
     #         print_method(f'Get {dwvc.CWCN_INSTRUMENT_CONFIG.SYMBOL} Index Price: {msg["data"]} : unix time : {time.time()}')
@@ -733,18 +739,18 @@ class TradeClient:
 
         return self._request('GET', f'/api/v1/orders/{order_id}', auth=True)
     
-    def clear_positions(self,LAVERAGE):
+    def clear_positions(self,LEVERAGE,SYMBOL):
         t_init = time.time()
         print_method("clearning all account positions")
         all_positions_details=self.get_all_positions()
-        for _pos_d in all_positions_details:
+        for _pos_d in [_ for _ in all_positions_details if _['symbol']==SYMBOL]:
             if(abs(_pos_d['currentQty'])>0):
                 print_method("clear position por symbol : {}".format(_pos_d['symbol']))
                 order_data=self.create_market_order(
                     symbol=_pos_d['symbol'],
                     side='sell' if _pos_d['currentQty']>0 else 'buy',
                     size=abs(_pos_d['currentQty']),
-                    leverage=LAVERAGE)
+                    leverage=LEVERAGE)
             self.cancel_all_orders(_pos_d['symbol'])
         logging.warning("all positions clear in {}s".format(t_init-time.time()))
         return True

@@ -1,20 +1,23 @@
 # --- --- --- ---- 
 # from os import system
+import os
 import subprocess
 import ast
 import pandas as pd
+# --- --- --- ---- 
+os.environ['DOWAAVE_GSS_F1']=""
+os.environ['DOWAAVE_GSS_F2']=""
+os.environ['DOWAAVE_TFT_F1']=""
 # --- --- --- ---- 
 import torch_dowaave_gauss_nebajke
 import torch_dowaave_tft_nebajke
 import cwcn_duuruva_piaabo
 # --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- 
 # --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- 
-
+# EXPECT cwcn_dowaave_front.py be active
 # --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- 
 # --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- 
-# --- --- --- --- --- THIS IS THE PLACE WHERE SYMBOL CONFIGURATION IS DONE
-# --- --- --- --- --- 
-from cwcn_dwve_client_config import dwve_btcusdtperp_configuration as dwvc
+from cwcn_dwve_client_config import dwve_instrument_configuration as dwvc
 # --- --- --- --- --- 
 # --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- 
 # --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- 
@@ -25,6 +28,7 @@ class DATA_KIJTYU:
     def __init__(self):
         # --- --- --- --- --- SET UP THE PRICE DUURUVA
         self.price_duuruva=cwcn_duuruva_piaabo.DUURUVA(_duuruva_vector_size=1,_wrapper_duuruva_normalize='not', _d_name='price_duuruva')
+        self.load_data()
     def load_data(self):
         # --- --- --- --- --- READ ORIGINAL FILE
         # self.loaded_dataframe=pd.read_csv(
@@ -94,6 +98,18 @@ class DATA_KIJTYU:
         #     self.loaded_dataframe.ilo[c_index,'price']=aux_v
         #     print(self.loaded_dataframe.ilo[c_index,'price'])
         #     input()
+    def get_c_tick(self):
+        seq_aux=subprocess.check_output(['tail', '-{}'.format(1), dwvc.DATA_FILE]).decode('ascii').replace('\n','')
+        seq_aux=ast.literal_eval('[{}]'.format(seq_aux))
+        return seq_aux[0]
+    def check_if_data_update(self):
+        seq_aux=subprocess.check_output(['tail', '-{}'.format(1), dwvc.DATA_FILE]).decode('ascii').replace('\n','')
+        seq_aux=ast.literal_eval('[{}]'.format(seq_aux))
+        print(self.c_last_tk['sequence'].item(),seq_aux[0]['sequence'])
+        if(self.c_last_tk['sequence'].item()!=seq_aux[0]['sequence']):
+            return True
+        else:
+            return False
     def load_and_get_dataframe(self, seq_size):
         # print('tail -{} {}'.format(seq_size,dwvc.DATA_FILE))
         seq_aux=subprocess.check_output(['tail', '-{}'.format(seq_size), dwvc.DATA_FILE]).decode('ascii').replace('\n','')
@@ -103,12 +119,14 @@ class DATA_KIJTYU:
         logging_fun(self.loaded_dataframe.describe())
         logging_fun(self.loaded_dataframe.head()) 
         self.ujcamei_transform()
+        self.c_last_tk=self.loaded_dataframe.tail(1)
         return self.loaded_dataframe
         
         
 class MEMEENUNE:
     def __init__(self):
-        pass
+        self.c_data_kijtyu = DATA_KIJTYU()
+        self.launch_uwaabo(True)
     def train_tff(self,working_dataframe):
         torch_dowaave_tft_nebajke.train_tft(working_dataframe,
             ALWAYS_SAVING_MODEL=dwvc.tft_ALWAYS_SAVING_MODEL, # reduntant saving
@@ -123,9 +141,39 @@ class MEMEENUNE:
             n_epochs=dwvc.tft_n_epochs,
             batch_size=dwvc.tft_batch_size)
 
-    def launch_uwaabo(self,working_dataframe):
-        # --- update gss
+    def launch_uwaabo(self,force=False):
+        # --- --- --- --- 
         import time
+        s_time=time.time()
+        # --- --- --- --- 
+        if(force or self.c_data_kijtyu.check_if_data_update()):
+            self.working_dataframe = self.c_data_kijtyu.load_and_get_dataframe(max(dwvc.gss_c_seq_size,dwvc.tft_c_seq_size))
+            # --- --- --- --- 
+            gss_figname1, gss_figname2=torch_dowaave_gauss_nebajke.relife_gauss(
+                self.working_dataframe.tail(dwvc.gss_c_seq_size).copy(),
+                active_dimension='price',
+                active_coin=dwvc.SYMBOL,
+                training_iter =dwvc.gss_training_iter,
+                learning_rate =dwvc.gss_learning_rate,
+                c_horizon=dwvc.gss_c_horizon,
+                c_horizon_delta=dwvc.gss_c_horizon_delta,
+                c_iterations=dwvc.gss_c_iterations,
+                c_backlash=dwvc.gss_c_backlash)
+            os.environ['DOWAAVE_GSS_F1']=gss_figname1
+            os.environ['DOWAAVE_GSS_F2']=gss_figname2
+            logging_fun("gauss_fig1: {}, gauss_fig2:{}".format(gss_figname1,gss_figname2))
+            logging_fun("gauss exe in : {} [s]".format(time.time()-s_time))
+            s_time=time.time()
+            tft_figname=torch_dowaave_tft_nebajke.relife_tft(
+                self.working_dataframe.tail(dwvc.tft_c_seq_size).copy(), # dwvc.tft_c_seq_size
+                model_path=dwvc.tft_ALWAYS_SAVING_MODEL,
+                max_encoder_length=dwvc.tft_max_encoder_length,
+                max_prediction_length=dwvc.tft_max_prediction_length)
+            logging_fun("tft_fig1: {}".format(tft_figname))
+            logging_fun("tft exe in : {} [s]".format(time.time()-s_time))
+            os.environ['DOWAAVE_TFT_F1']=tft_figname
+        # --- --- --- --- 
+        
         # s_time=time.time()
         # gss_figname1, gss_figname2=torch_dowaave_gauss_nebajke.relife_gauss(
         #     working_dataframe.tail(dwvc.gss_c_seq_size).copy(),
@@ -139,42 +187,41 @@ class MEMEENUNE:
         #     c_backlash=dwvc.gss_c_backlash)
         # logging_fun("gauss_fig1: {}, gauss_fig2:{}".format(gss_figname1,gss_figname2))
         # logging_fun("gauss exe in : {} [s]".format(time.time()-s_time))
+        # import random
         # --- --- --- --- 
-        import random
-        for _ in range(1):
-            idx_rand=random.randint(0,len(working_dataframe.index)-dwvc.tft_c_seq_size)
-            s_time=time.time()
-            gss_figname1, gss_figname2=torch_dowaave_gauss_nebajke.relife_gauss(
-                working_dataframe.iloc[idx_rand:idx_rand+dwvc.tft_c_seq_size].copy(),
-                active_dimension='price',
-                active_coin=dwvc.SYMBOL,
-                training_iter =dwvc.gss_training_iter,
-                learning_rate =dwvc.gss_learning_rate,
-                c_horizon=dwvc.gss_c_horizon,
-                c_horizon_delta=dwvc.gss_c_horizon_delta,
-                c_iterations=dwvc.gss_c_iterations,
-                c_backlash=dwvc.gss_c_backlash)
-            logging_fun("gauss_fig1: {}, gauss_fig2:{}".format(gss_figname1,gss_figname2))
-            logging_fun("gauss exe in : {} [s]".format(time.time()-s_time))
-            s_time=time.time()
-            tft_figname=torch_dowaave_tft_nebajke.relife_tft(
-                working_dataframe.iloc[idx_rand:idx_rand+dwvc.tft_c_seq_size].copy(), # dwvc.tft_c_seq_size
-                model_path=dwvc.tft_ALWAYS_SAVING_MODEL,
-                max_encoder_length=dwvc.tft_max_encoder_length,
-                max_prediction_length=dwvc.tft_max_prediction_length)
-            logging_fun("tft_fig1: {}".format(tft_figname))
-            logging_fun("tft exe in : {} [s]".format(time.time()-s_time))
+        # for _ in range(1):
+        #     idx_rand=random.randint(0,len(working_dataframe.index)-dwvc.tft_c_seq_size)
+        #     s_time=time.time()
+        #     gss_figname1, gss_figname2=torch_dowaave_gauss_nebajke.relife_gauss(
+        #         working_dataframe.iloc[idx_rand:idx_rand+dwvc.tft_c_seq_size].copy(),
+        #         active_dimension='price',
+        #         active_coin=dwvc.SYMBOL,
+        #         training_iter =dwvc.gss_training_iter,
+        #         learning_rate =dwvc.gss_learning_rate,
+        #         c_horizon=dwvc.gss_c_horizon,
+        #         c_horizon_delta=dwvc.gss_c_horizon_delta,
+        #         c_iterations=dwvc.gss_c_iterations,
+        #         c_backlash=dwvc.gss_c_backlash)
+        #     logging_fun("gauss_fig1: {}, gauss_fig2:{}".format(gss_figname1,gss_figname2))
+        #     logging_fun("gauss exe in : {} [s]".format(time.time()-s_time))
+        #     s_time=time.time()
+        #     tft_figname=torch_dowaave_tft_nebajke.relife_tft(
+        #         working_dataframe.iloc[idx_rand:idx_rand+dwvc.tft_c_seq_size].copy(), # dwvc.tft_c_seq_size
+        #         model_path=dwvc.tft_ALWAYS_SAVING_MODEL,
+        #         max_encoder_length=dwvc.tft_max_encoder_length,
+        #         max_prediction_length=dwvc.tft_max_prediction_length)
+        #     logging_fun("tft_fig1: {}".format(tft_figname))
+        #     logging_fun("tft exe in : {} [s]".format(time.time()-s_time))
         # --- --- --- --- 
 
 if __name__=="__main__":
     c_memeenune = MEMEENUNE()
-    c_data_kijtyu = DATA_KIJTYU()
+    # c_data_kijtyu = DATA_KIJTYU()
     # working_dataframe = c_data_kijtyu.load_and_get_dataframe(
     #     dwvc.train_load_n_seq
     # )
     # train_tff(working_dataframe)
     # input()
-    working_dataframe = c_data_kijtyu.load_and_get_dataframe(
-        max(dwvc.gss_c_seq_size,dwvc.tft_c_seq_size)
-    )
-    c_memeenune.launch_uwaabo(working_dataframe)
+    c_memeenune.launch_uwaabo()
+    # while True:
+    #     print(os.environ['DOWAAVE_GSS_F1'])

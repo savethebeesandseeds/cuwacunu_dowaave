@@ -14,7 +14,7 @@ from collections import defaultdict
 # --- --- --- --- --- --- --- ---  
 PAPER_INSTRUMENT = True #FIXME # < --- --- --- --- FAKE / REAL ; (bool) flag
 # --- --- --- --- 
-# --- --- --- 
+# --- --- --- SYMBOL INSTRUMENT MUST MATCH WHAT IS CONFIGURED ON CLIENT
 SYMBOL_INSTRUMENT = 'BTCUSDTPERP' #'BCHUSDTPERP' #'BTCUSDTPERP' #'SINE-100'#'BTCUSDTPERP' #'ADAUSDTPERP'/'BTCUSDTPERP'
 # --- --- 
 ACTIVE_ADHO_FIELD = [
@@ -30,6 +30,13 @@ ACTIVE_ADHO_FIELD = [
     'Alliu',
     'sequence',
     'ts',
+    # --- --- --- 
+    'DOWAAVE_GSS_F1',
+    'DOWAAVE_GSS_F2',
+    'DOWAAVE_TFT_F1',
+    # --- --- --- 
+    'price'
+    # --- --- --- 
 ]
 # --- --- --- --- 
 # --- --- --- 
@@ -44,17 +51,17 @@ CLIENT_URL = '{}://{}:{}/'.format(CLIENT_PROTOL,CLIENT_DIR,CLIENT_PORT)
 # --- --- --- RENDER
 # --- --- 
 FRAMES_PER_SECOND = 2
-KALAMAR_RENDER_MODE = 'terminal/gui' #'terminal'/'gui'
-KALAMAR_BUFFER_SIZE = 1000
+DOWAAVE_RENDER_MODE = 'terminal/gui' #'terminal'/'gui'
+DOWAAVE_BUFFER_SIZE = 1000
 SCREEN_RESOLUTION = [120,20] # x_size,y_size
-KALAMAR_RESOLUTION = [6,20] # x_size,y_size
+DOWAAVE_RESOLUTION = [6,20] # x_size,y_size
 # --- --- 
-SCREEN_TO_KALAMAR_SCALER = [KALAMAR_RESOLUTION[0]//SCREEN_RESOLUTION[0],KALAMAR_RESOLUTION[1]//SCREEN_RESOLUTION[1]]
-KALAMAR_TO_SCREEN_SCALER = [SCREEN_RESOLUTION[0]//KALAMAR_RESOLUTION[0],SCREEN_RESOLUTION[1]//KALAMAR_RESOLUTION[1]]
+SCREEN_TO_DOWAAVE_SCALER = [DOWAAVE_RESOLUTION[0]//SCREEN_RESOLUTION[0],DOWAAVE_RESOLUTION[1]//SCREEN_RESOLUTION[1]]
+DOWAAVE_TO_SCREEN_SCALER = [SCREEN_RESOLUTION[0]//DOWAAVE_RESOLUTION[0],SCREEN_RESOLUTION[1]//DOWAAVE_RESOLUTION[1]]
 # --- --- 
-if(KALAMAR_RENDER_MODE):
+if(DOWAAVE_RENDER_MODE):
     #FIXME add all render asserts
-    assert(KALAMAR_TO_SCREEN_SCALER[1]==1 and SCREEN_TO_KALAMAR_SCALER[1]==1), "WRONG KALAMAR RESOLUTION" #FIXME this is not true
+    assert(DOWAAVE_TO_SCREEN_SCALER[1]==1 and SCREEN_TO_DOWAAVE_SCALER[1]==1), "WRONG DOWAAVE RESOLUTION" #FIXME this is not true
 # --- --- 
 # --- --- 
 class CWCN_COLORS:
@@ -85,42 +92,49 @@ class CWCN_CURSOR: #FIXME not in use
 # --- --- 
 
 # --- --- 
-KALAMAR_COMMAND_BAO = defaultdict(lambda : 'None')
-KALAMAR_COMMAND_BAO['+']='BUY'
-KALAMAR_COMMAND_BAO['-']='SELL'
-KALAMAR_COMMAND_BAO['0']='CLOSE'
-KALAMAR_COMMAND_BAO['R']='MESSAGE:ÄZ¬\x8e\\\x88$Æ' # 2x TEHDUJCO
-KALAMAR_COMMAND_BAO['W']='MESSAGE:\x00\x84]H' # 2x AHDO
+DOWAAVE_COMMAND_BAO = defaultdict(lambda : 'None')
+DOWAAVE_COMMAND_BAO['R']='HEAVYLOAD:ÄZ¬\x8e\\\x88$Æ' # 2x TEHDUJCO
+DOWAAVE_COMMAND_BAO['W']='HEAVYLOAD:\x00\x84]H' # 2x AHDO
+DOWAAVE_COMMAND_BAO['r']='KUAILOAD:ÄZ¬\x8e\\\x88$Æ' # 2x TEHDUJCO
+DOWAAVE_COMMAND_BAO['w']='KUAILOAD:\x00\x84]H' # 2x AHDO
+DOWAAVE_COMMAND_BAO['+']='PROCEED:¸QÐIø5:BUY' # 2x avyeta 
+DOWAAVE_COMMAND_BAO['-']='PROCEED:¸QÐIø5:SELL' # 2x avyeta 
+DOWAAVE_COMMAND_BAO['0']='PROCEED:¸QÐIø5:CLOSE' # 2x avyeta 
 # --- --- 
 
-KALAMAR_RENDER_BAO = {
-    '0,0' : {'color':(lambda klmr : CWCN_COLORS.GREEN)      ,'lam':(lambda klmr : 'CUWACUNU')},
+DOWAAVE_RENDER_BAO = {
+    '0,0' : {'color':(lambda dwve : CWCN_COLORS.GREEN)      ,'lam':(lambda dwve : 'CUWACUNU')},
     
-    # '0,2' : {'color':(lambda klmr : CWCN_COLORS.GREEN)    ,'lam':(lambda klmr : 'unrealisedPNL:')},
-    # '1,2' : {'color':(lambda klmr : CWCN_COLORS.GREEN)    ,'lam':(lambda klmr : klmr._KALAMAR__klmr_state['unrealisedPNL'])},
-    # '0,4' : {'color':(lambda klmr : CWCN_COLORS.GREEN)    ,'lam':(lambda klmr : 'accountEquity:')},
-    # '1,4' : {'color':(lambda klmr : CWCN_COLORS.GREEN)    ,'lam':(lambda klmr : klmr._KALAMAR__klmr_state['accountEquity'])},
-    '0,6' : {'color':(lambda klmr : CWCN_COLORS.REGULAR)    ,'lam':(lambda klmr : 'availableBalance:')},
-    '1,6' : {'color':(lambda klmr : CWCN_COLORS.GREEN)      ,'lam':(lambda klmr : klmr._KALAMAR__klmr_state['availableBalance'])},
-    '0,7' : {'color':(lambda klmr : CWCN_COLORS.REGULAR)    ,'lam':(lambda klmr : 'realisedPnl:')},
-    '1,7' : {'color':(lambda klmr : CWCN_COLORS.GREEN)      ,'lam':(lambda klmr : klmr._KALAMAR__klmr_state['realisedPnl'])},
-    '0,8' : {'color':(lambda klmr : CWCN_COLORS.REGULAR)    ,'lam':(lambda klmr : 'currency:')},
-    '1,8' : {'color':(lambda klmr : CWCN_COLORS.GREEN)      ,'lam':(lambda klmr : klmr._KALAMAR__klmr_state['currency'])},
+    # '0,2' : {'color':(lambda dwve : CWCN_COLORS.GREEN)    ,'lam':(lambda dwve : 'unrealisedPNL:')},
+    # '1,2' : {'color':(lambda dwve : CWCN_COLORS.GREEN)    ,'lam':(lambda dwve : dwve._dwve_state['unrealisedPNL'])},
+    # '0,4' : {'color':(lambda dwve : CWCN_COLORS.GREEN)    ,'lam':(lambda dwve : 'accountEquity:')},
+    # '1,4' : {'color':(lambda dwve : CWCN_COLORS.GREEN)    ,'lam':(lambda dwve : dwve._dwve_state['accountEquity'])},
+    '0,7' : {'color':(lambda dwve : CWCN_COLORS.REGULAR)    ,'lam':(lambda dwve : 'availableBalance:')},
+    '1,7' : {'color':(lambda dwve : CWCN_COLORS.GREEN)      ,'lam':(lambda dwve : dwve._dwve_state['availableBalance'])},
+    '0,8' : {'color':(lambda dwve : CWCN_COLORS.REGULAR)    ,'lam':(lambda dwve : 'currency:')},
+    '1,8' : {'color':(lambda dwve : CWCN_COLORS.GREEN)      ,'lam':(lambda dwve : dwve._dwve_state['currency'])},
     
-    '0,10' : {'color':(lambda klmr : CWCN_COLORS.REGULAR)   ,'lam':(lambda klmr : 'symbol:')},
-    '1,10' : {'color':(lambda klmr : CWCN_COLORS.GREEN)     ,'lam':(lambda klmr : klmr._KALAMAR__klmr_state['symbol'])},
-    '0,11' : {'color':(lambda klmr : CWCN_COLORS.REGULAR)    ,'lam':(lambda klmr : 'unrealisedPnl:')},
-    '1,11' : {'color':(lambda klmr : CWCN_COLORS.GREEN)      ,'lam':(lambda klmr : klmr._KALAMAR__klmr_state['unrealisedPnl'])},
-    '0,12' : {'color':(lambda klmr : CWCN_COLORS.REGULAR)   ,'lam':(lambda klmr : 'currentQty:')},
-    '1,12' : {'color':(lambda klmr : CWCN_COLORS.WARNING)   ,'lam':(lambda klmr : klmr._KALAMAR__klmr_state['currentQty'])},
+    '0,10' : {'color':(lambda dwve : CWCN_COLORS.REGULAR)   ,'lam':(lambda dwve : 'symbol:')},
+    '1,10' : {'color':(lambda dwve : CWCN_COLORS.GREEN)     ,'lam':(lambda dwve : dwve._dwve_state['symbol'])},
+    '0,11' : {'color':(lambda dwve : CWCN_COLORS.REGULAR)   ,'lam':(lambda dwve : 'price')},
+    '1,11' : {'color':(lambda dwve : CWCN_COLORS.GREEN)     ,'lam':(lambda dwve : '{} [{}]'.format(dwve._dwve_state['price'],dwve._dwve_state['currency']))},
+    '0,12' : {'color':(lambda dwve : CWCN_COLORS.REGULAR)   ,'lam':(lambda dwve : 'unrealisedPnl:')},
+    '1,12' : {'color':(lambda dwve : CWCN_COLORS.GREEN)     ,'lam':(lambda dwve : "{}{}{}".format(CWCN_COLORS.RED if float(dwve._dwve_state['unrealisedPnl'])<0 else CWCN_COLORS.GREEN if float(dwve._dwve_state['unrealisedPnl'])>0 else CWCN_COLORS.WARNING,dwve._dwve_state['unrealisedPnl'],CWCN_COLORS.REGULAR) if dwve._dwve_state['unrealisedPnl'] is not None else CWCN_COLORS.WARNING)},
+    '0,13' : {'color':(lambda dwve : CWCN_COLORS.REGULAR)    ,'lam':(lambda dwve : 'realisedPnl:')},
+    '1,13' : {'color':(lambda dwve : CWCN_COLORS.GREEN)     ,'lam':(lambda dwve : "{}{}{}".format(CWCN_COLORS.RED if float(dwve._dwve_state['realisedPnl'])<0 else CWCN_COLORS.GREEN if float(dwve._dwve_state['realisedPnl'])>0 else CWCN_COLORS.WARNING,dwve._dwve_state['realisedPnl'],CWCN_COLORS.REGULAR) if dwve._dwve_state['realisedPnl'] is not None else CWCN_COLORS.WARNING)},
+    '0,14' : {'color':(lambda dwve : CWCN_COLORS.REGULAR)   ,'lam':(lambda dwve : 'currentQty:')},
+    '1,14' : {'color':(lambda dwve : CWCN_COLORS.WARNING)   ,'lam':(lambda dwve : dwve._dwve_state['currentQty'])},
     
 
-    '5,18' : {'color':(lambda klmr : CWCN_COLORS.REGULAR)   ,'lam':(lambda klmr : 'response time:')},
-    '6,18' : {'color':(lambda klmr : CWCN_COLORS.GREEN)     ,'lam':(lambda klmr : klmr._KALAMAR__last_pressed_backtime if isinstance(klmr._KALAMAR__last_pressed_backtime,str) else '')},
-    '5,19' : {'color':(lambda klmr : CWCN_COLORS.REGULAR)   ,'lam':(lambda klmr : 'command')},
-    '6,19' : {'color':(lambda klmr : CWCN_COLORS.GREEN if KALAMAR_COMMAND_BAO[klmr._KALAMAR__act_pressed_kb] != KALAMAR_COMMAND_BAO.default_factory() else CWCN_COLORS.RED), 'lam':(lambda klmr : klmr._KALAMAR__act_pressed_kb)},
-    '5,20' : {'color':(lambda klmr : CWCN_COLORS.REGULAR)   ,'lam':(lambda klmr : 'TIME:')},
-    '6,20' : {'color':(lambda klmr : CWCN_COLORS.BLUE)      ,'lam':(lambda klmr : datetime.now())},
+    '5,17' : {'color':(lambda dwve : CWCN_COLORS.REGULAR)   ,'lam':(lambda dwve : 'response time:')},
+    '6,17' : {'color':(lambda dwve : CWCN_COLORS.GREEN)     ,'lam':(lambda dwve : dwve._last_pressed_backtime if isinstance(dwve._last_pressed_backtime,str) else '')},
+    '5,18' : {'color':(lambda dwve : CWCN_COLORS.REGULAR)   ,'lam':(lambda dwve : "heart beat rate:")},
+    '6,18' : {'color':(lambda dwve : CWCN_COLORS.BLUE)      ,'lam':(lambda dwve : "{:.4} [Hz]".format(1/(dwve.taotime-dwve.daotime)))},
+    '5,19' : {'color':(lambda dwve : CWCN_COLORS.REGULAR)   ,'lam':(lambda dwve : 'command')},
+    '6,19' : {'color':(lambda dwve : CWCN_COLORS.GREEN if DOWAAVE_COMMAND_BAO[dwve._act_pressed_kb] != DOWAAVE_COMMAND_BAO.default_factory() else CWCN_COLORS.RED), 'lam':(lambda dwve : "{}".format(repr(dwve._act_pressed_kb)) if DOWAAVE_COMMAND_BAO[dwve._act_pressed_kb] != DOWAAVE_COMMAND_BAO.default_factory() else "{} [no action]".format(repr(dwve._act_pressed_kb)))},
+    '5,20' : {'color':(lambda dwve : CWCN_COLORS.REGULAR)   ,'lam':(lambda dwve : 'TIME:')},
+    '6,20' : {'color':(lambda dwve : CWCN_COLORS.BLUE)      ,'lam':(lambda dwve : datetime.now())},
+    '0,21' : {'color':(lambda dwve : CWCN_COLORS.REGULAR)   ,'lam':(lambda dwve : "--------------------------------------------------------------------------------------\n{}".format(dwve._message_buffer))},
 }
 
 # --- --- --- --- --- --- --- --- --- --- --- --- 
@@ -131,31 +145,107 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 # --- --- --- --- --- --- 
 PLOT_RENDER_BAO = [
+    # {
+    #     'ID'    :(lambda dwve_state, render : 'waka'),
+    #     'type'  :(lambda dwve_state, render : 'plot'),
+    #     'figure':(lambda dwve_state, render : Figure(figsize=(4,2),facecolor="black")),
+    #     'axis'  :(lambda dwve_state, render : render['figure'].add_subplot(111)),
+    #     'facecolor':(lambda dwve_state, render : render['axis'].set_facecolor((0,0,0))),
+    #     'title' :(lambda dwve_state, render : render['axis'].set_title("Estimation Grid", fontsize=8,color=(1,1,1))),
+    #     'ylabel':(lambda dwve_state, render : render['axis'].set_ylabel("Y",fontsize=8)),
+    #     'xlabel':(lambda dwve_state, render : render['axis'].set_xlabel("X",fontsize=8)),
+    #     'plot'  :(lambda dwve_state, render : render['axis'].plot(dwve_state['x_vals'],dwve_state['y_vals'],color='red')),
+    #     # 'plot2'  :(lambda dwve_state, render : render['axis'].plot(dwve_state['x_vals'],-dwve_state['y_vals'],color='blue')),
+    #     'grid'  :(lambda dwve_state, render : render['axis'].grid(which='major',color='white',linestyle='-',linewidth=0.2)),
+    #     'tick'  :(lambda dwve_state, render : render['axis'].tick_params(colors='red',which='both')),
+    #     'canvas':(lambda dwve_state, render : FigureCanvasTkAgg(render['figure'],master=render['window'])),
+    #     'pack'  :(lambda dwve_state, render : render['canvas'].get_tk_widget().pack()),
+    #     'pos'   :(lambda dwve_state, render : render['canvas'].get_tk_widget().place(x=100, y=50)),
+    #     'draw'  :(lambda dwve_state, render : render['canvas'].draw()),
+    #     # 'update_clear'  :(lambda dwve_state, render : render['axis'].clear()),
+    #     'update_x':(lambda dwve_state, render : render['plot'][0].set_xdata(dwve_state['x_vals'])),
+    #     'update_y':(lambda dwve_state, render : render['plot'][0].set_ydata(dwve_state['y_vals'])),
+    #     'update_relim':(lambda dwve_state, render : render['axis'].relim()),
+    #     'update_autoscale':(lambda dwve_state, render : render['axis'].autoscale_view()),
+    #     'update_draw'  :(lambda dwve_state, render : render['canvas'].draw()),
+    #     'update_flush'  :(lambda dwve_state, render : render['canvas'].flush_events()),
+    # },
     {
-        'ID'    :(lambda klmr_state, render : 'waka'),
-        'type'  :(lambda klmr_state, render : 'plot'),
-        'figure':(lambda klmr_state, render : Figure(figsize=(4,2),facecolor="black")),
-        'axis'  :(lambda klmr_state, render : render['figure'].add_subplot(111)),
-        'facecolor':(lambda klmr_state, render : render['axis'].set_facecolor((0,0,0))),
-        'title' :(lambda klmr_state, render : render['axis'].set_title("Estimation Grid", fontsize=8,color=(1,1,1))),
-        'ylabel':(lambda klmr_state, render : render['axis'].set_ylabel("Y",fontsize=8)),
-        'xlabel':(lambda klmr_state, render : render['axis'].set_xlabel("X",fontsize=8)),
-        'plot'  :(lambda klmr_state, render : render['axis'].plot(klmr_state['x_vals'],klmr_state['y_vals'],color='red')),
-        # 'plot2'  :(lambda klmr_state, render : render['axis'].plot(klmr_state['x_vals'],-klmr_state['y_vals'],color='blue')),
-        'grid'  :(lambda klmr_state, render : render['axis'].grid(which='major',color='white',linestyle='-',linewidth=0.2)),
-        'tick'  :(lambda klmr_state, render : render['axis'].tick_params(colors='red',which='both')),
-        'canvas':(lambda klmr_state, render : FigureCanvasTkAgg(render['figure'],master=render['window'])),
-        'pack'  :(lambda klmr_state, render : render['canvas'].get_tk_widget().pack()),
-        'pos'   :(lambda klmr_state, render : render['canvas'].get_tk_widget().place(x=100, y=50)),
-        'draw'  :(lambda klmr_state, render : render['canvas'].draw()),
-        # 'update_clear'  :(lambda klmr_state, render : render['axis'].clear()),
-        'update_x':(lambda klmr_state, render : render['plot'][0].set_xdata(klmr_state['x_vals'])),
-        'update_y':(lambda klmr_state, render : render['plot'][0].set_ydata(klmr_state['y_vals'])),
-        'update_relim':(lambda klmr_state, render : render['axis'].relim()),
-        'update_autoscale':(lambda klmr_state, render : render['axis'].autoscale_view()),
-        'update_draw'  :(lambda klmr_state, render : render['canvas'].draw()),
-        'update_flush'  :(lambda klmr_state, render : render['canvas'].flush_events()),
-    }
+        'ID'    :'DOWAAVE_GSS_F1',
+        'type'  :(lambda dwve_state, render : 'plot'),
+        'figure':(lambda dwve_state, render : Figure(figsize=(8,4),facecolor="black")),
+        'axis'  :(lambda dwve_state, render : render['figure'].add_subplot(111)),
+        'facecolor':(lambda dwve_state, render : render['axis'].set_facecolor((0,0,0))),
+        'title' :(lambda dwve_state, render : render['axis'].set_title("Estimation Grid", fontsize=8,color=(0,0,0))),
+        # 'ylabel':(lambda dwve_state, render : render['axis'].set_ylabel("Y",fontsize=8)),
+        # 'xlabel':(lambda dwve_state, render : render['axis'].set_xlabel("X",fontsize=8)),
+        # 'plot'  :(lambda dwve_state, render : render['axis'].plot(dwve_DOWAAVE_TFT_F1state['x_vals'],dwve_state['y_vals'],color='red')),
+        # 'plot2'  :(lambda dwve_state, render : render['axis'].plot(dwve_state['x_vals'],-dwve_state['y_vals'],color='blue')),
+        # 'grid'  :(lambda dwve_state, render : render['axis'].grid(which='major',color='white',linestyle='-',linewidth=0.2)),
+        'tick'  :(lambda dwve_state, render : render['axis'].tick_params(colors='black',which='both')),
+        'canvas':(lambda dwve_state, render : FigureCanvasTkAgg(render['figure'],master=render['window'])),
+        'pack'  :(lambda dwve_state, render : render['canvas'].get_tk_widget().pack()),
+        'pos'   :(lambda dwve_state, render : render['canvas'].get_tk_widget().place(x=-100, y=0)),
+        'draw'  :(lambda dwve_state, render : render['canvas'].draw()),
+        # 'update_clear'  :(lambda dwve_state, render : render['axis'].clear()),
+        # 'update_x':(lambda dwve_state, render : render['plot'][0].set_xdata(dwve_state['x_vals'])),
+        # 'update_y':(lambda dwve_state, render : render['plot'][0].set_ydata(dwve_state['y_vals'])),
+        'update_img':(lambda dwve_state, render : render['axis'].imshow(dwve_state['DOWAAVE_GSS_F1']) if dwve_state['DOWAAVE_GSS_F1'] is not None else None),
+        'update_autoscale':(lambda dwve_state, render : render['axis'].autoscale_view()),
+        'update_draw'  :(lambda dwve_state, render : render['canvas'].draw()),
+        'update_flush'  :(lambda dwve_state, render : render['canvas'].flush_events()),
+    },
+    {
+        'ID'    :'DOWAAVE_GSS_F2',
+        'type'  :(lambda dwve_state, render : 'plot'),
+        'figure':(lambda dwve_state, render : Figure(figsize=(8,4),facecolor="black")),
+        'axis'  :(lambda dwve_state, render : render['figure'].add_subplot(111)),
+        'facecolor':(lambda dwve_state, render : render['axis'].set_facecolor((0,0,0))),
+        'title' :(lambda dwve_state, render : render['axis'].set_title("Estimation Grid", fontsize=8,color=(0,0,0))),
+        # 'ylabel':(lambda dwve_state, render : render['axis'].set_ylabel("Y",fontsize=8)),
+        # 'xlabel':(lambda dwve_state, render : render['axis'].set_xlabel("X",fontsize=8)),
+        # 'plot'  :(lambda dwve_state, render : render['axis'].plot(dwve_DOWAAVE_TFT_F1state['x_vals'],dwve_state['y_vals'],color='red')),
+        # 'plot2'  :(lambda dwve_state, render : render['axis'].plot(dwve_state['x_vals'],-dwve_state['y_vals'],color='blue')),
+        # 'grid'  :(lambda dwve_state, render : render['axis'].grid(which='major',color='white',linestyle='-',linewidth=0.2)),
+        'tick'  :(lambda dwve_state, render : render['axis'].tick_params(colors='black',which='both')),
+        'canvas':(lambda dwve_state, render : FigureCanvasTkAgg(render['figure'],master=render['window'])),
+        'pack'  :(lambda dwve_state, render : render['canvas'].get_tk_widget().pack()),
+        'pos'   :(lambda dwve_state, render : render['canvas'].get_tk_widget().place(x=-100, y=350)),
+        'draw'  :(lambda dwve_state, render : render['canvas'].draw()),
+        # 'update_clear'  :(lambda dwve_state, render : render['axis'].clear()),
+        # 'update_x':(lambda dwve_state, render : render['plot'][0].set_xdata(dwve_state['x_vals'])),
+        # 'update_y':(lambda dwve_state, render : render['plot'][0].set_ydata(dwve_state['y_vals'])),
+        'update_img':(lambda dwve_state, render : render['axis'].imshow(dwve_state['DOWAAVE_GSS_F2']) if dwve_state['DOWAAVE_GSS_F2'] is not None else None),
+        'update_autoscale':(lambda dwve_state, render : render['axis'].autoscale_view()),
+        'update_draw'  :(lambda dwve_state, render : render['canvas'].draw()),
+        'update_flush'  :(lambda dwve_state, render : render['canvas'].flush_events()),
+    },
+    {
+        'ID'    :'DOWAAVE_TFT_F1',
+        'type'  :(lambda dwve_state, render : 'plot'),
+        'figure':(lambda dwve_state, render : Figure(figsize=(10,10),facecolor="black")),
+        'axis'  :(lambda dwve_state, render : render['figure'].add_subplot(111)),
+        'facecolor':(lambda dwve_state, render : render['axis'].set_facecolor((0,0,0))),
+        'title' :(lambda dwve_state, render : render['axis'].set_title("Estimation Grid", fontsize=8,color=(0,0,0))),
+        # 'ylabel':(lambda dwve_state, render : render['axis'].set_ylabel("Y",fontsize=8)),
+        # 'xlabel':(lambda dwve_state, render : render['axis'].set_xlabel("X",fontsize=8)),
+        # 'plot'  :(lambda dwve_state, render : render['axis'].plot(dwve_DOWAAVE_TFT_F1state['x_vals'],dwve_state['y_vals'],color='red')),
+        # 'plot2'  :(lambda dwve_state, render : render['axis'].plot(dwve_state['x_vals'],-dwve_state['y_vals'],color='blue')),
+        # 'grid'  :(lambda dwve_state, render : render['axis'].grid(which='major',color='white',linestyle='-',linewidth=0.2)),
+        'tick'  :(lambda dwve_state, render : render['axis'].tick_params(colors='black',which='both')),
+        'canvas':(lambda dwve_state, render : FigureCanvasTkAgg(render['figure'],master=render['window'])),
+        'pack'  :(lambda dwve_state, render : render['canvas'].get_tk_widget().pack()),
+        'pos'   :(lambda dwve_state, render : render['canvas'].get_tk_widget().place(x=450, y=-100)),
+        'draw'  :(lambda dwve_state, render : render['canvas'].draw()),
+        # 'update_clear'  :(lambda dwve_state, render : render['axis'].clear()),
+        # 'update_x':(lambda dwve_state, render : render['plot'][0].set_xdata(dwve_state['x_vals'])),
+        # 'update_y':(lambda dwve_state, render : render['plot'][0].set_ydata(dwve_state['y_vals'])),
+        'update_img':(lambda dwve_state, render : render['axis'].imshow(dwve_state['DOWAAVE_TFT_F1']) if dwve_state['DOWAAVE_TFT_F1'] is not None else None),
+        'update_autoscale':(lambda dwve_state, render : render['axis'].autoscale_view()),
+        'update_draw'  :(lambda dwve_state, render : render['canvas'].draw()),
+        'update_flush'  :(lambda dwve_state, render : render['canvas'].flush_events()),
+    },
+
 ]
 # --- --- --- --- --- --- 
 

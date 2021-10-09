@@ -24,11 +24,10 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 # --- --- --- --- --- 
 import cwcn_duuruva_piaabo
-from cwcn_dwve_client_config import dwve_btcusdtperp_configuration as dwvc
+from cwcn_dwve_client_config import dwve_instrument_configuration as dwvc
 # --- --- --- --- --- 
+tft_dpi=120
 ON_FILE_WLOT_FOLDER='./tft_dumps'
-# MEAN REDUCTION
-# MIN_HORIZON SUM
 # --- --- --- --- --- 
 
 def assert_folder(_f_path):
@@ -141,7 +140,7 @@ def logging_fun(msg):
 
 def train_tft(working_dataframe,
     ALWAYS_SAVING_MODEL='lightning_logs/always_saving_tft.ckpt',
-    ACTUAL_MODEL_PATH='lightning_logs/default/version_23/checkpoints/epoch=0-step=29.ckpt',
+    ACTUAL_MODEL_PATH=None,#'lightning_logs/default/version_23/checkpoints/epoch=0-step=29.ckpt',
     JUST_LOAD=False, # meaning False when training is needed,
     DO_TUNNIN=False,
     FIND_OPTMAL_LR=False,
@@ -254,21 +253,23 @@ def train_tft(working_dataframe,
                 # of the gradient for recurrent neural networks
                 gradient_clip_val=0.07,
             )
-
-            tft = TemporalFusionTransformer.from_dataset(
-                training,
-                # not meaningful for finding the learning rate but otherwise very important
-                learning_rate=0.03,#0.03,
-                hidden_size=108,  # most important hyperparameter apart from learning rate
-                # number of attention heads. Set to up to 4 for large datasets
-                attention_head_size=2,
-                dropout=0.1,  # between 0.1 and 0.3 are good values
-                hidden_continuous_size=8,  # set to <= hidden_size
-                output_size=21,  # 7 quantiles by default
-                loss=QuantileLoss(),
-                # reduce learning rate if no improvement in validation loss after x epochs
-                reduce_on_plateau_patience=4,
-            )
+            if(ACTUAL_MODEL_PATH is not None):
+                tft = TemporalFusionTransformer.load_from_checkpoint(ACTUAL_MODEL_PATH)
+            else:
+                tft = TemporalFusionTransformer.from_dataset(
+                    training,
+                    # not meaningful for finding the learning rate but otherwise very important
+                    learning_rate=0.03,#0.03,
+                    hidden_size=108,  # most important hyperparameter apart from learning rate
+                    # number of attention heads. Set to up to 4 for large datasets
+                    attention_head_size=2,
+                    dropout=0.1,  # between 0.1 and 0.3 are good values
+                    hidden_continuous_size=8,  # set to <= hidden_size
+                    output_size=21,  # 7 quantiles by default
+                    loss=QuantileLoss(),
+                    # reduce learning rate if no improvement in validation loss after x epochs
+                    reduce_on_plateau_patience=4,
+                )
 
             logging_fun(f"Number of parameters in network: {tft.size()/1e3:.1f}k")
             res = trainer.tuner.lr_find(
@@ -328,18 +329,21 @@ def train_tft(working_dataframe,
                 callbacks=[lr_logger, early_stop_callback],
                 logger=logger,
             )
-            tft = TemporalFusionTransformer.from_dataset(
-                training,
-                learning_rate=LEARNING_RATE,
-                hidden_size=108,
-                attention_head_size=2,
-                dropout=0.1,
-                hidden_continuous_size=8,
-                output_size=21,  # 7 quantiles by default
-                loss=QuantileLoss(),#QuantileLoss(),
-                log_interval=10,  # uncomment for learning rate finder and otherwise, e.g. to 10 for logging every 10 batches
-                reduce_on_plateau_patience=4,
-            )
+            if(ACTUAL_MODEL_PATH is not None):
+                tft = TemporalFusionTransformer.load_from_checkpoint(ACTUAL_MODEL_PATH)
+            else:
+                tft = TemporalFusionTransformer.from_dataset(
+                    training,
+                    learning_rate=LEARNING_RATE,
+                    hidden_size=108,
+                    attention_head_size=2,
+                    dropout=0.1,
+                    hidden_continuous_size=8,
+                    output_size=21,  # 7 quantiles by default
+                    loss=QuantileLoss(),#QuantileLoss(),
+                    log_interval=10,  # uncomment for learning rate finder and otherwise, e.g. to 10 for logging every 10 batches
+                    reduce_on_plateau_patience=4,
+                )
             
             logging_fun(f"Number of parameters in network: {tft.size()/1e3:.1f}k")
             # --- --- --- --- --- FIT THE NETWORK
@@ -415,8 +419,8 @@ def relife_tft(
     # input()
     new_raw_predictions, new_x = tft_model.predict(predict_data, mode="raw", return_x=True)
     # --- --- --- --- --- 
-    fig_, (ax1,ax2,ax3) = plt.subplots(1,3)
-    fig_.legend().set_visible(False)
+    fig_, (ax1,ax2,ax3) = plt.subplots(1,3, gridspec_kw={'width_ratios': [1,6,2]})
+    # fig_.legend().set_visible(False)
     # # --- --- 
     # print("new_x : {}".format(new_x.keys()))
     # print("new_x : {}".format([new_x[_].shape for _ in list(new_x.keys())]))
@@ -459,7 +463,7 @@ def relife_tft(
     c_delast=delast(np.array(encoder_data['price'].to_list()))
     p_defirst=defirst(ax1.get_lines()[1]._y)
     # --- --- --- --- 
-    ax2.plot(c_delast,color='green')
+    ax2.plot(c_delast,color='green',linewidth=0.25)
     # --- --- --- --- 
     ax3.plot(p_defirst,color='orange')
     for ctx_ in range(new_raw_predictions['prediction'].size()[2]):
@@ -478,7 +482,7 @@ def relife_tft(
     # ax3.plot(new_raw_predictions['prediction'][0,:,5].detach().cpu())
     # ax3.plot(new_raw_predictions['prediction'][0,:,6].detach().cpu())
     # --- --- 
-    plt.legend(frameon=False)
+    # plt.legend(frameon=False)
     fig_.patch.set_facecolor((0,0,0))
     ax1.set_facecolor((0,0,0))
     ax2.set_facecolor((0,0,0))
@@ -512,8 +516,9 @@ def relife_tft(
     wlot_path="{}/{}".format(ON_FILE_WLOT_FOLDER,working_dataframe['symbol'].iloc[-1])
     assert_folder(wlot_path)
     # figname=os.path.join(wlot_path,"{}.png".format(working_dataframe['symbol'].iloc[-1]))
-    figname=os.path.join(wlot_path,"{}-{}.png".format(working_dataframe['symbol'].iloc[-1],uuid.uuid4()))
-    plt.savefig(figname, dpi=500, facecolor='black', edgecolor='black',
+    # figname=os.path.join(wlot_path,"{}-{}.png".format(working_dataframe['symbol'].iloc[-1],uuid.uuid4()))
+    figname=os.path.join(wlot_path,"{}.png".format(working_dataframe['symbol'].iloc[-1]))
+    plt.savefig(figname, dpi=tft_dpi, facecolor='black', edgecolor='black',
         orientation='portrait', format=None, transparent=False, 
         bbox_inches='tight', pad_inches=0.0,metadata=None)
     return figname

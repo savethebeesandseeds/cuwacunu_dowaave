@@ -59,37 +59,118 @@
 
 
 
-import tkinter as tk
+# import tkinter as tk
 
-class KeyTracker:
-    def __init__(self, on_key_press, on_key_release):
-        self.on_key_press = on_key_press
-        self.on_key_release = on_key_release
-        self._key_pressed = False
+# class KeyTracker:
+#     def __init__(self, on_key_press, on_key_release):
+#         self.on_key_press = on_key_press
+#         self.on_key_release = on_key_release
+#         self._key_pressed = False
 
-    def report_key_press(self, event):
-        if not self._key_pressed:
-            self.on_key_press()
-        self._key_pressed = True
+#     def report_key_press(self, event):
+#         if not self._key_pressed:
+#             self.on_key_press()
+#         self._key_pressed = True
 
-    def report_key_release(self, event):
-        if self._key_pressed:
-            self.on_key_release()
-        self._key_pressed = False
-
-
-def start_recording(event=None):
-    print('Recording right now!')
+#     def report_key_release(self, event):
+#         if self._key_pressed:
+#             self.on_key_release()
+#         self._key_pressed = False
 
 
-def stop_recording(event=None):
-    print('Stop recording right now!')
+# def start_recording(event=None):
+#     print('Recording right now!')
 
 
+# def stop_recording(event=None):
+#     print('Stop recording right now!')
+import io
+from PIL import Image
+
+def RCsi_CRYPT(key, data): # tehdujco, !
+    S = list(range(256))
+    j = 0
+    for i in list(range(256)):
+        j = (j + S[i] + ord(key[i % len(key)])) % 256
+        S[i], S[j] = S[j], S[i]
+    j = 0
+    y = 0
+    out = []
+    for char in data:
+        j = (j + 1) % 256
+        y = (y + S[j]) % 256
+        S[j], S[y] = S[y], S[j]
+        out.append(chr(ord(char) ^ S[(S[j] + S[y]) % 256]))
+    return ''.join(out)
+    
+def test_file_encode_image(c_path):
+    with open(c_path,'rb') as _F:
+        c_loaded = _F.read()
+    # --- --- --- m1
+    # print((repr(c_loaded)))
+    # c_encoded=str(RCsi_CRYPT("waka","{}".format(c_loaded.decode('iso-8859-1'))))
+    # # print((repr(c_encoded)))
+    # c_decoded=str(RCsi_CRYPT("waka","{}".format(c_encoded))).encode('iso-8859-1')
+    # # print((repr(c_decoded)))
+    # c_stream = io.BytesIO(c_decoded)
+    # img=Image.open(c_stream)
+    # img.show()
+    
+
+
+
+
+
+    # --- --- --- m2
+    c_key=r"waka"
+    # print((repr(c_loaded)))
+    c_encoded = ','.join([str(ord(__)) for __ in c_loaded.decode('iso-8859-1')])
+    c_encoded=str(RCsi_CRYPT(c_key,"{}".format(c_encoded)))
+    print((repr(c_encoded)))
+    c_decoded=str(RCsi_CRYPT(c_key,"{}".format(c_encoded)))
+    c_decoded=[chr(int(__)) for __ in c_decoded.split(',')]
+    # print([chr(int(__)) for __ in c_decoded])
+    # print(c_decoded)
+    c_decoded=''.join(c_decoded).encode('iso-8859-1')
+    # print((repr(c_decoded)))
+    c_stream = io.BytesIO(c_decoded)
+    
+    # print((repr(c_stream)))
+    img=Image.open(c_stream)
+    img.show()
+    # print((repr(c_stream)))
+
+    
+    
+    # --- --- --- m3 fix
+    # c_stream = io.BytesIO(c_loaded)
+    # # print((repr(c_stream)))
+    # import numpy as np
+    # import ast
+    # img=np.asarray(Image.open(c_stream))
+    # c_encoded=str(RCsi_CRYPT("waka","{}".format(img.tolist())))
+    # c_decoded=str(RCsi_CRYPT("waka","{}".format(c_encoded)))
+    # c_decoded=ast.literal_eval(c_decoded)
+    # c_decoded=np.array(c_decoded)
+    # print(c_decoded)
+    # img = Image.fromarray(c_decoded.astype('uint8'),'RGB')
+    # img.show()
 if __name__ == '__main__':
-    master = tk.Tk()
+    # master = tk.Tk()
 
-    key_tracker = KeyTracker(start_recording, stop_recording)
-    master.bind("<KeyPress-Return>", key_tracker.report_key_press)
-    master.bind("<KeyRelease-Return>", start_recording)
-    master.mainloop()
+    # key_tracker = KeyTracker(start_recording, stop_recording)
+    # master.bind("<KeyPress-Return>", key_tracker.report_key_press)
+    # master.bind("<KeyRelease-Return>", start_recording)
+    # master.mainloop()
+
+    # test_file_encode_image('./tft_dumps/BTCUSDTPERP/BTCUSDTPERP-baed0311-1289-4c24-a76d-66de7e18a452.png')
+    # test_file_encode_image('./tft_dumps/BTCUSDTPERP/BTCUSDTPERP.png')
+    # test_file_encode_image('./gauss_dumps/BTCUSDTPERP/BTCUSDTPERP.0.png')
+    # test_file_encode_image('./text.txt')
+
+    c_loaded=''
+    print((repr(c_loaded)))
+    c_encoded=str(RCsi_CRYPT("avyeta","{}".format('avyeta')))
+    print((repr(c_encoded)))
+    c_decoded=str(RCsi_CRYPT("avyeta","{}".format(c_encoded)))
+    print((repr(c_decoded)))

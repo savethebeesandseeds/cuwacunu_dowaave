@@ -6,19 +6,24 @@ from flask import Flask
 from flask import request
 from flask import jsonify
 from flask import send_from_directory
-# --- --- --- --- --- --- ---
-# --- --- --- 
+import time
 import threading
+import ast
 import sys
 sys.path.append('./communications/')
-import poloniex_api
+import json
 # --- --- --- --- --- --- ---
 # --- --- --- 
+import poloniex_api
 import cwcn_dwve_client_config as dwvcc
+import cwcn_dowaave_memeenune as dwvmm
 os.environ['FLASK_ENV']='development'
 os.environ['FLASK_APP']='flaskr'
 app = Flask(__name__)
 # --- --- --- --- --- --- ---
+os.environ['DOWAAVE_GSS_F1']="./gauss_dumps/BTCUSDTPERP/BTCUSDTPERP.0.png"
+os.environ['DOWAAVE_GSS_F2']="./gauss_dumps/BTCUSDTPERP/BTCUSDTPERP.1.png"
+os.environ['DOWAAVE_TFT_F1']="./tft_dumps/BTCUSDTPERP/BTCUSDTPERP.png"
 # --- --- --- --- --- --- ---
 # --- --- --- --- --- --- --- 
 def RCsi_CRYPT(key, data): # tehdujco, !
@@ -37,15 +42,19 @@ def RCsi_CRYPT(key, data): # tehdujco, !
         out.append(chr(ord(char) ^ S[(S[j] + S[y]) % 256]))
     return ''.join(out)
 # --- --- --- --- --- --- ---
-class KALAMAR_CLIENT:
+class DOWAAVE_CLIENT:
     def __init__(self):
+        # --- --- --- --- --- 
+        self.c_memeenune = dwvmm.MEMEENUNE()
+        self.c_memeenune.launch_uwaabo()
         # --- --- --- --- --- 
         self.dowaave_user_data = {}
         # --- --- --- --- --- 
         self.dowaave_instruments_data=dict([(__,{}) for __ in dwvcc.ACTIVE_SYMBOLS])
-        self.dowaave_user_data=dict([(__,{}) for __ in list(dwvcc.VALID_NODES.keys())])
+        self.dowaave_user_data=dict([(dwvcc.VALID_NODES[__],{}) for __ in list(dwvcc.VALID_NODES.keys())])
+        self.dowaave_user_tian=dict([(dwvcc.VALID_NODES[__],{'daotime':time.time(),'taotime':time.time()}) for __ in list(dwvcc.VALID_NODES.keys())])
         # --- --- --- --- --- 
-        self.app=FlaskAppWrapper('KALAMAR')
+        self.app=FlaskAppWrapper('DOWAAVE')
         self.app.add_endpoint(
             endpoint='/',#/<path:path>',
             endpoint_name='dowaave_home',
@@ -62,12 +71,9 @@ class KALAMAR_CLIENT:
             )
         threading.Thread(target=start_server).start()
         # --- --- --- --- --- 
-        print(dwvcc.WEB_SOCKET_SUBS)
+        # print(dwvcc.WEB_SOCKET_SUBS)
         def start_echance_instrument():
-            self.exchange_instrument = poloniex_api.EXCHANGE_INSTRUMENT(
-                _message_wrapper_=self.dowaave_ujcamei, 
-                _websocket_subs=dwvcc.WEB_SOCKET_SUBS,
-                _is_farm=False)
+            self.exchange_instrument = poloniex_api.EXCHANGE_INSTRUMENT(_is_farm=False)
         threading.Thread(target=start_echance_instrument).start()
         # --- --- --- --- --- 
         
@@ -80,7 +86,101 @@ class KALAMAR_CLIENT:
         # loop=asyncio.get_event_loop()
         # loop.run_until_complete(wait())
     # --- --- --- --- --- --- --- --- --- --- --- 
+    def update_terminal_bao(self,req_command,req_symbol,req_node):
+        try:
+            if('HEAVYLOAD' in req_command):
+                prime_1 = self.exchange_instrument.user_instrument.get_account_overview() # get_account_overview
+                prime_2 = self.exchange_instrument.trade_instrument.get_position_details(req_symbol) # get_position_details
+            else:
+                prime_1  = {}
+            if(os.path.isfile(dwvcc.CWCN_FARM_CONFIG.FRONT_WALLET_FILE)):
+                c_wall={}
+                with open(dwvcc.CWCN_FARM_CONFIG.FRONT_WALLET_FILE,"r",encoding='utf-8') as _F:
+                    # c_wall = RCsi_CRYPT('shallowsecurewallet',_F.read())
+                    c_decoded=[chr(int(__)) for __ in _F.read().split(',')]
+                    c_decoded=''.join(c_decoded)
+                    c_wall = RCsi_CRYPT('shallowsecurewallet',c_decoded)
+                # print(repr(c_wall))
+                c_wall = ast.literal_eval(c_wall)
+                prime_1.update(c_wall)
+            if('HEAVYLOAD' in req_command):
+                prime_1.update(prime_2)
+            prime_1.update({'price':self.c_memeenune.c_data_kijtyu.get_c_tick()['price']})
+            with open(dwvcc.CWCN_FARM_CONFIG.FRONT_WALLET_FILE,"w+",encoding='utf-8') as _F:
+                # _F.write("{}".format(RCsi_CRYPT('shallowsecurewallet','{}'.format(prime_1))))
+                c_encoded = "{}".format(RCsi_CRYPT('shallowsecurewallet','{}'.format(prime_1)))
+                c_encoded = ','.join([str(ord(__)) for __ in c_encoded])
+                _F.write(c_encoded)
+            prime_1={k:v for k,v in prime_1.items() if k in dwvcc.AHDO_FIELDS}
+            self.dowaave_user_data[dwvcc.VALID_NODES[req_node]].update(prime_1)
+            # print(json.dumps(self.dowaave_user_data,indent=4))
+        except Exception as e:
+            print("problem updating terminal bao: {}".format(e))
+        # --- --- --- --- --- --- --- --- --- --- --- --- --- 
+        try:
+            crypt_resp = {}
+            for _yield_key in list(self.dowaave_user_data[dwvcc.VALID_NODES[req_node]].keys()):
+                crypt_resp[_yield_key]=str(RCsi_CRYPT(request.url,"{}:{}".format(_yield_key,self.dowaave_user_data[dwvcc.VALID_NODES[req_node]][_yield_key]))+"%20").encode('utf-8')
+            def generate():
+                for _yield_key in list(self.dowaave_user_data[dwvcc.VALID_NODES[req_node]].keys()):
+                    yield crypt_resp[_yield_key]
+            return app.response_class(generate(), content_type='text/encoded; charset=utf-8')
+            # --- --- --- --- --- --- --- --- --- --- --- --- --- 
+        except Exception as e:
+            print("problem responding updated terminal bao: {}".format(e))
+
+    def update_plot_bao(self,req_command,req_symbol,req_node):
+        if('HEAVYLOAD' in req_command):
+            self.c_memeenune.launch_uwaabo()
+        crypt_resp={}
+        for _yield_key in [_k for _k in list(os.environ.keys()) if _k in ['DOWAAVE_GSS_F1','DOWAAVE_GSS_F2','DOWAAVE_TFT_F1']]:
+            try:
+                with open(os.environ[_yield_key],'rb') as _F:
+                    c_loaded_file=_F.read()
+                # print(repr(c_loaded_file))
+                c_encoded = ','.join([str(ord(__)) for __ in c_loaded_file.decode('iso-8859-1')])
+                c_encoded='{}:::::'.format(_yield_key)+str(RCsi_CRYPT(request.url,"{}".format(c_encoded)))+"%20"
+                # c_encoded=str(RCsi_CRYPT(request.url,"{}".format(c_loaded_file.decode('iso-8859-1'))))+"%20"
+                crypt_resp[_yield_key]=c_encoded
+            except Exception as e:
+                print("problem updating <{}> plot bao: {}".format(_yield_key,e))
+        # --- --- --- --- --- --- --- --- --- --- --- --- --- 
+        try:
+            if(len(list(crypt_resp.keys()))>0):
+                delta_x = 64
+                def generate():
+                    for _yield_key in list(crypt_resp.keys()):
+                        for _yield_beat in [crypt_resp[_yield_key][x:x+delta_x] for x in range(0,len(crypt_resp[_yield_key]),delta_x)]:
+                            yield _yield_beat
+                return app.response_class(generate(), content_type='text/encoded; charset=utf-8')
+            else:
+                return app.response_class("None", content_type='text/encoded; charset=utf-8')
+        except Exception as e:
+            print("problem responding updated plot bao: {}".format(e))
+    def proceed_bao(self,req_command,req_symbol,req_node):
+        print("proceed_bao: {}".format(req_command))
+        if('BUY' in req_command and not dwvcc.PAPER_INSTRUMENT):
+            order_data=self.exchange_instrument.trade_instrument.create_market_order(
+                symbol=dwvcc.dwve_instrument_configuration.SYMBOL,
+                side='buy',
+                size=1,
+                leverage=dwvcc.dwve_instrument_configuration.LEVERAGE)
+            print(json.dumps(order_data,indent=4))
+        if('SELL' in req_command and not dwvcc.PAPER_INSTRUMENT):
+            order_data=self.exchange_instrument.trade_instrument.create_market_order(
+                symbol=dwvcc.dwve_instrument_configuration.SYMBOL,
+                side='sell',
+                size=1,
+                leverage=dwvcc.dwve_instrument_configuration.LEVERAGE)
+            print(json.dumps(order_data,indent=4))
+        if('CLOSE' in req_command):
+            self.exchange_instrument.trade_instrument.clear_positions(
+                LEVERAGE=dwvcc.dwve_instrument_configuration.LEVERAGE,
+                SYMBOL=dwvcc.dwve_instrument_configuration.SYMBOL)
+            print("Closed all positions for symbol: {} with leverage: {}".format(dwvcc.dwve_instrument_configuration.SYMBOL,dwvcc.dwve_instrument_configuration.LEVERAGE))
+        return "completed!", 200
     def dowaave_home(self,**args):
+        # --- --- --- --- 
         try:
             if request.environ.get('HTTP_X_FORWARDED_FOR') is None:
                 req_addr=request.environ['REMOTE_ADDR']
@@ -94,37 +194,25 @@ class KALAMAR_CLIENT:
             req_node=RCsi_CRYPT(req_addr,req_node)
             req_command=RCsi_CRYPT(req_addr[::-1],req_command)
             print("symbol   : {}".format(repr(req_symbol)))
-            print("node     : {}".format(repr(req_node)))
             print("command  : {}".format(repr(req_command)))
+            print("node     : {} -> {}".format(repr(req_node),dwvcc.VALID_NODES[req_node]))
             if(req_node in list(dwvcc.VALID_NODES.keys())):
-                if('MESSAGE' in req_command):
-                    if('\x00\x84]H' in req_command): # update terminal by direct request (slow)
-                        aux_1 = self.exchange_instrument.user_instrument.get_account_overview() # get_account_overview
-                        aux_2 = self.exchange_instrument.trade_instrument.get_position_details(req_symbol) # get_position_details
-                        aux_1.update(aux_2)
-                        aux_1={k:v for k,v in aux_1.items() if k in dwvcc.AHDO_FIELDS}
-                        self.dowaave_user_data[dwvcc.VALID_NODES[req_node]].update(aux_1)
-                        # import json
-                        # print(json.dumps(self.dowaave_user_data,indent=4))
-                        # --- --- --- --- --- --- --- --- --- --- --- --- --- 
-                        crypt_resp = {}
-                        for _yield_key in list(self.dowaave_user_data.keys()):
-                            crypt_resp[_yield_key]=str(RCsi_CRYPT(request.url,"{}:{}".format(_yield_key,self.dowaave_user_data[dwvcc.VALID_NODES[req_node]][_yield_key]))+"%20").encode('utf-8')
-                        def generate():
-                            for _yield_key in list(self.dowaave_user_data.keys()):
-                                yield crypt_resp[_yield_key]
-                        return app.response_class(generate(), content_type='text/encoded; charset=utf-8')
-                        # --- --- --- --- --- --- --- --- --- --- --- --- --- 
-                    elif('ÄZ¬\x8e\\\x88$Æ' in req_command): # update gui graphs by direct request
-                        def generate():
-                            # for row in iter_all_rows():
-                            yield 1 # ... 
-                        return app.response_class(generate(), content_type='text/encoded; charset=utf-8')
-                return '%20'.join(format(ord(XXX), 'b') for XXX in RCsi_CRYPT(request.url,'\"Hello World!\"'))
+                if('\x00\x84]H' in req_command): # update terminal by direct request (slow)
+                    c_return=self.update_terminal_bao(req_command,req_symbol,req_node)
+                elif('ÄZ¬\x8e\\\x88$Æ' in req_command): # update gui graphs by direct request (slow)
+                    c_return=self.update_plot_bao(req_command,req_symbol,req_node)
+                elif('¸QÐIø5' in req_command):
+                    c_return=self.proceed_bao(req_command,req_symbol,req_node)
+                else:
+                    return '%20'.join(format(ord(XXX), 'b') for XXX in RCsi_CRYPT(request.url,'\"Hello World!\"'))
+                return c_return
             else:
                 return 'DENIED!', 402
-        except:
+        except Exception as e:
+            print("Error on dowaave_home : {}".format(e))
             return 'ERROR!', 400
+
+
     def dowaave_transfomations(self):
         self.dowaave_instruments_data['date']=datetime.datetime.fromtimestamp(self.dowaave_instruments_data['ts']/1000000000)
     def dowaave_ujcamei(self,msg):
@@ -151,5 +239,5 @@ class FlaskAppWrapper(object):
         self.app.add_url_rule(endpoint,endpoint_name, EndpointAction(handler), methods=['GET'])
 # --- --- --- --- --- --- --- 
 if __name__ == '__main__':
-    klrm_ctl=KALAMAR_CLIENT()
+    klrm_ctl=DOWAAVE_CLIENT()
 # --- --- --- --- --- --- --- 

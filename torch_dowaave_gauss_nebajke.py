@@ -4,6 +4,7 @@ import numpy as np
 import logging
 # --- --- ---
 ON_FILE_WLOT_FOLDER='./gauss_dumps'
+gss_dpi=120
 # --- --- ---
 logging.basicConfig(
     level=logging.INFO,
@@ -170,6 +171,7 @@ class GAUSSIAN_WIKIMYEI:
         self.likelihood.eval()
         # Test points are regularly spaced along [0,1]
         # Make predictions by feeding model through likelihood
+        # print(uwaabo_x)
         with torch.no_grad(), gpytorch.settings.fast_pred_var():
             observed_pred = self.likelihood(self.model(uwaabo_x))
         return observed_pred
@@ -225,9 +227,10 @@ class GAUSSIAN_WLOTER:
             # ax.set_ylim([-3, 3])
             # ax.legend(['Kijtiyu Alliu, Uwaabo Mean, Unknown Alliu, Uwaabo Confidence'])
             # # plt.show()
-            import uuid
-            figname=os.path.join(self.out_wlot_folder_itm,"{}.{}-{}.png".format(self.wlot_itm,self.itx_ctx,uuid.uuid4()))
-            plt.savefig(figname, dpi=500, facecolor='black', edgecolor='black',
+            # import uuid
+            # figname=os.path.join(self.out_wlot_folder_itm,"{}.{}-{}.png".format(self.wlot_itm,self.itx_ctx,uuid.uuid4()))
+            figname=os.path.join(self.out_wlot_folder_itm,"{}.{}.png".format(self.wlot_itm,self.itx_ctx))
+            plt.savefig(figname, dpi=gss_dpi, facecolor='black', edgecolor='black',
                 orientation='portrait', format=None, transparent=False, 
                 bbox_inches='tight', pad_inches=0.0,metadata=None)
         self.itx_ctx+=1

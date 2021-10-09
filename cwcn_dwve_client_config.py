@@ -31,7 +31,8 @@ class dwve_btcusdtperp_configuration:
     gss_c_horizon_delta= 0.5
     gss_c_iterations= 0xFFFF
     gss_c_backlash= -0.85
-    gss_c_seq_size=250
+    gss_c_seq_size=100
+    # gss_dpi=100
     # --- --- --- --- 
     tft_ALWAYS_SAVING_MODEL = 'lightning_logs/always_saving_tft.ckpt'
     tft_ACTUAL_MODEL_PATH = 'lightning_logs/default/version_25/checkpoints/epoch=30-step=929.ckpt'
@@ -44,9 +45,17 @@ class dwve_btcusdtperp_configuration:
     tft_n_epochs=100
     tft_batch_size = 64  # set this between 32 to 128
     tft_c_seq_size=tft_max_encoder_length
+    # tft_dpi=100
+    # --- --- --- --- 
+    LEVERAGE = '100'
     # --- --- --- --- s
-
+# --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- 
+# --- --- --- --- --- THIS IS THE PLACE WHERE SYMBOL CONFIGURATION IS DONE
+# --- --- --- --- --- 
+dwve_instrument_configuration = dwve_btcusdtperp_configuration # < --- --- --- --- --- --- --- --- --
 # --- --- --- --- 
+# --- --- --- --- --- 
+# --- --- --- --- --- 
 # assert(os.environ['CWCN_CONFIG']==os.path.realpath(__file__)), '[ERROR:] wrong configuration import'
 # ... #FIXME assert comulative munaajpi is in place, seems ok, gae takes the account
 # --- --- --- --- 
@@ -56,8 +65,7 @@ device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 # --- --- 
 # --- --- --- --- 
 # --- --- --- --- --- --- --- ---  
-PAPER_INSTRUMENT = True #FIXME # < --- --- --- --- FAKE / REAL ; (bool) flag
-LEVERAGE = '100'
+PAPER_INSTRUMENT = False #FIXME # < --- --- --- --- FAKE / REAL ; (bool) flag
 # --- --- --- --- 
 # --- --- --- 
 # --- --- 
@@ -186,29 +194,30 @@ class CWCN_DUURUVA_CONFIG:
 class CWCN_FARM_CONFIG:
     FARM_FOLDER = '{}/../dowaave_data_farm/FARM'.format(os.path.dirname(os.path.abspath(__file__)))
     FARM_SYMBOLS = [
-        'BTCUSDTPERP',
-        'ETHUSDTPERP',
-        'BSVUSDTPERP',
-        'BCHUSDTPERP',
-        'YFIUSDTPERP',
-        'UNIUSDTPERP',
-        'LINKUSDTPERP',
-        'TRXUSDTPERP',
-        'XRPUSDTPERP',
-        'XMRUSDTPERP',
-        'LTCUSDTPERP',
-        'DOTUSDTPERP',
-        'DOGEUSDTPERP',
-        'FILUSDTPERP',
-        'BNBUSDTPERP',
-        '1000SHIBUSDTPERP',
-        'BTTUSDTPERP',
-        'ADAUSDTPERP',
-        'SOLUSDTPERP',
-        'LUNAUSDTPERP',
-        'ICPUSDTPERP',
+        # 'BTCUSDTPERP',
+        # 'ETHUSDTPERP',
+        # 'BSVUSDTPERP',
+        # 'BCHUSDTPERP',
+        # 'YFIUSDTPERP',
+        # 'UNIUSDTPERP',
+        # 'LINKUSDTPERP',
+        # 'TRXUSDTPERP',
+        # 'XRPUSDTPERP',
+        # 'XMRUSDTPERP',
+        # 'LTCUSDTPERP',
+        # 'DOTUSDTPERP',
+        # 'DOGEUSDTPERP',
+        # 'FILUSDTPERP',
+        # 'BNBUSDTPERP',
+        # '1000SHIBUSDTPERP',
+        # 'BTTUSDTPERP',
+        # 'ADAUSDTPERP',
+        # 'SOLUSDTPERP',
+        # 'LUNAUSDTPERP',
+        # 'ICPUSDTPERP',
         ]
     FARM_DATA_EXTENSION = '.poloniex_ticker_data'
+    FRONT_WALLET_FILE = '{}/../WALLET/WALLET.poloniex_wallet_data'.format(os.path.dirname(os.path.abspath(__file__)))
 # --- --- --- --- 
 # print(CWCN_FARM_CONFIG.FARM_FOLDER)
 # --- --- --- --- 
