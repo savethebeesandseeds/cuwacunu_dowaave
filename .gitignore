@@ -4,3 +4,4 @@ __pycache__/
 index.html
 model_no_tunning.pkl
 test_study.pkl
+saved_models/
