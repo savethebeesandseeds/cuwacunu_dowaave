@@ -13,17 +13,21 @@ from ray import tune
 # --- --- --- --- 
 torch.distributions.Distribution.set_default_validate_args(True)
 # --- --- --- --- 
-class dwve_btcusdtperp_configuration:
+class dwve_ethusdtperp_configuration:
     # --- --- --- --- 
-    SYMBOL = 'BTCUSDTPERP'
+    SYMBOL = 'ETHUSDTPERP' # 'BTCUSDTPERP'
     DATA_ROOT = os.path.normpath('{}/../dowaave_data_farm/FARM'.format(os.path.dirname(os.path.abspath(__file__))))
+    # DATA_ROOT = os.path.normpath('{}/../data_farm/FARM'.format(os.path.dirname(os.path.abspath(__file__))))
     DATA_FILE='{}/{}.poloniex_ticker_data'.format(DATA_ROOT,SYMBOL)
     DATA_USED_COLUMNS = ['symbol','price','ts','sequence'] #['symbol','sequence','side','size','price','bestBidSize','bestBidPrice','bestAskPrice','tradeId','ts','bestAskSize'], 
     TRANSFORM_CANDLE = {
-        'candle_flag':False,
-        'candle_step':(200,(lambda x: abs(x['mean'])),'delta_price','price') # every 20 'std' of 'delta_price' aplied to 'price'
+        'candle_flag':True,
+        # 'candle_step':(20,(lambda x: abs(x['mean'])),'delta_price','price') # every 20 'std' of 'delta_price' aplied to 'price'
+        'candle_item':'price',
+        'candle_step':1.0,
+        'prom_candle_step_multiplier':10.0,
     }
-    train_load_n_seq = 20000
+    train_load_n_seq = 2000000
     # --- --- --- --- 
     gss_training_iter=  100
     gss_learning_rate=  0.1
@@ -35,14 +39,14 @@ class dwve_btcusdtperp_configuration:
     # gss_dpi=100
     # --- --- --- --- 
     tft_ALWAYS_SAVING_MODEL = 'lightning_logs/always_saving_tft.ckpt'
-    tft_ACTUAL_MODEL_PATH = 'lightning_logs/default/version_25/checkpoints/epoch=30-step=929.ckpt'
+    tft_ACTUAL_MODEL_PATH = 'lightning_logs/always_saving_tft.ckpt'
     tft_DO_TUNNIN = False
     tft_FIND_OPTMAL_LR = False
-    tft_LEARNING_RATE=0.03 # 0.12
-    tft_max_prediction_length = 24
+    tft_LEARNING_RATE=0.01 # 0.12
+    tft_max_prediction_length = 10
     tft_max_encoder_length = 100
     tft_validation_porcentaje = 0.12
-    tft_n_epochs=100
+    tft_n_epochs=5
     tft_batch_size = 64  # set this between 32 to 128
     tft_c_seq_size=tft_max_encoder_length
     # tft_dpi=100
@@ -52,7 +56,7 @@ class dwve_btcusdtperp_configuration:
 # --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- 
 # --- --- --- --- --- THIS IS THE PLACE WHERE SYMBOL CONFIGURATION IS DONE
 # --- --- --- --- --- 
-dwve_instrument_configuration = dwve_btcusdtperp_configuration # < --- --- --- --- --- --- --- --- --
+dwve_instrument_configuration = dwve_ethusdtperp_configuration # < --- --- --- --- --- --- --- --- --
 # --- --- --- --- 
 # --- --- --- --- --- 
 # --- --- --- --- --- 
@@ -83,7 +87,8 @@ CLIENT_URL = '{}://{}:{}/'.format(CLIENT_PROTOL,CLIENT_DIR,CLIENT_PORT)
 # --- --- --- AUTH
 # --- --- 
 VALID_NODES = {
-    '20:1a:06:3a:b4:84':'cuwacunu'
+    '20:1a:06:3a:b4:84':'cuwacunu',
+    'f0:2f:74:1e:fb:45':'jrmedallo'
 }
 # --- --- 
 ACTIVE_SYMBOLS = [

@@ -8,6 +8,7 @@ import pandas as pd
 os.environ['DOWAAVE_GSS_F1']=""
 os.environ['DOWAAVE_GSS_F2']=""
 os.environ['DOWAAVE_TFT_F1']=""
+os.environ['DOWAAVE_TFT_F2']=""
 # --- --- --- ---- 
 import torch_dowaave_gauss_nebajke
 import torch_dowaave_tft_nebajke
@@ -66,11 +67,10 @@ class DATA_KIJTYU:
         # --- --- --- --- --- SPLIT DATAFRAME INTO VALID FRAGMENTS
         if(dwvc.TRANSFORM_CANDLE['candle_flag']):
             def get_applied_item(df,_index):
-                return df.iloc[_index][dwvc.TRANSFORM_CANDLE['candle_step'][3]]
-            def get_candle_step(df):
-                return dwvc.TRANSFORM_CANDLE['candle_step'][0]*dwvc.TRANSFORM_CANDLE['candle_step'][1](df.describe()[dwvc.TRANSFORM_CANDLE['candle_step'][2]])
+                # return df.iloc[_index][dwvc.TRANSFORM_CANDLE['candle_step'][3]]
+                return df.iloc[_index][dwvc.TRANSFORM_CANDLE['candle_item']]
             idx_list=[]
-            candle_stp = get_candle_step(self.loaded_dataframe)
+            candle_stp=dwvc.TRANSFORM_CANDLE['candle_step']
             hold_state=get_applied_item(self.loaded_dataframe,0)
             for c_index,row in self.loaded_dataframe.iterrows():
                 # print(hold_state,get_applied_item(self.loaded_dataframe,c_index),candle_stp)
@@ -105,20 +105,35 @@ class DATA_KIJTYU:
     def check_if_data_update(self):
         seq_aux=subprocess.check_output(['tail', '-{}'.format(1), dwvc.DATA_FILE]).decode('ascii').replace('\n','')
         seq_aux=ast.literal_eval('[{}]'.format(seq_aux))
-        print(self.c_last_tk['sequence'].item(),seq_aux[0]['sequence'])
-        if(self.c_last_tk['sequence'].item()!=seq_aux[0]['sequence']):
-            return True
+        if(dwvc.TRANSFORM_CANDLE['candle_flag']):
+            def get_candle_step(df):
+                assert(False), "not in use!"
+            hold_state=self.c_last_tk[dwvc.TRANSFORM_CANDLE['candle_item']].item()
+            actual_state=seq_aux[0][dwvc.TRANSFORM_CANDLE['candle_item']]
+            candle_stp=dwvc.TRANSFORM_CANDLE['candle_step']
+            if(abs(hold_state-actual_state)>=candle_stp):
+                return True
+            else:
+                return False
         else:
-            return False
+            if(self.c_last_tk['sequence'].item()!=seq_aux[0]['sequence']):
+                return True
+            else:
+                return False
     def load_and_get_dataframe(self, seq_size):
         # print('tail -{} {}'.format(seq_size,dwvc.DATA_FILE))
-        seq_aux=subprocess.check_output(['tail', '-{}'.format(seq_size), dwvc.DATA_FILE]).decode('ascii').replace('\n','')
+        load_seq_size=int(dwvc.TRANSFORM_CANDLE['prom_candle_step_multiplier']*seq_size)
+        seq_size=int(seq_size)
+        seq_aux=subprocess.check_output(['tail', '-{}'.format(load_seq_size), dwvc.DATA_FILE]).decode('ascii').replace('\n','')
         seq_aux=ast.literal_eval('[{}]'.format(seq_aux))
         self.loaded_dataframe=pd.DataFrame.from_dict(seq_aux,orient='columns')
+        self.ujcamei_transform()
         logging_fun("--- --- ujcamei data --- ---")
         logging_fun(self.loaded_dataframe.describe())
         logging_fun(self.loaded_dataframe.head()) 
-        self.ujcamei_transform()
+        self.loaded_dataframe=self.loaded_dataframe.tail(seq_size)
+        if(len(self.loaded_dataframe.index)<seq_size):
+            print("[WARNING] loading dataframe, seq_size requested to be {}, but loaded only {}. Is recommended to configure a higher value for dwvc.TRANSFORM_CANDLE['prom_candle_step_multiplier'].".format(seq_size,len(self.loaded_dataframe.index)))
         self.c_last_tk=self.loaded_dataframe.tail(1)
         return self.loaded_dataframe
         
@@ -126,11 +141,11 @@ class DATA_KIJTYU:
 class MEMEENUNE:
     def __init__(self):
         self.c_data_kijtyu = DATA_KIJTYU()
-        self.launch_uwaabo(True)
-    def train_tff(self,working_dataframe):
+        # self.launch_uwaabo(True)
+    def train_tff(self,working_dataframe,reset=False):
         torch_dowaave_tft_nebajke.train_tft(working_dataframe,
             ALWAYS_SAVING_MODEL=dwvc.tft_ALWAYS_SAVING_MODEL, # reduntant saving
-            ACTUAL_MODEL_PATH=dwvc.tft_ACTUAL_MODEL_PATH,
+            ACTUAL_MODEL_PATH=None if reset else dwvc.tft_ACTUAL_MODEL_PATH,
             JUST_LOAD=False,
             DO_TUNNIN=dwvc.tft_DO_TUNNIN,
             FIND_OPTMAL_LR=dwvc.tft_FIND_OPTMAL_LR,
@@ -149,7 +164,7 @@ class MEMEENUNE:
         if(force or self.c_data_kijtyu.check_if_data_update()):
             self.working_dataframe = self.c_data_kijtyu.load_and_get_dataframe(max(dwvc.gss_c_seq_size,dwvc.tft_c_seq_size))
             # --- --- --- --- 
-            gss_figname1, gss_figname2=torch_dowaave_gauss_nebajke.relife_gauss(
+            gss_figname=torch_dowaave_gauss_nebajke.relife_gauss(
                 self.working_dataframe.tail(dwvc.gss_c_seq_size).copy(),
                 active_dimension='price',
                 active_coin=dwvc.SYMBOL,
@@ -159,9 +174,9 @@ class MEMEENUNE:
                 c_horizon_delta=dwvc.gss_c_horizon_delta,
                 c_iterations=dwvc.gss_c_iterations,
                 c_backlash=dwvc.gss_c_backlash)
-            os.environ['DOWAAVE_GSS_F1']=gss_figname1
-            os.environ['DOWAAVE_GSS_F2']=gss_figname2
-            logging_fun("gauss_fig1: {}, gauss_fig2:{}".format(gss_figname1,gss_figname2))
+            os.environ['DOWAAVE_GSS_F1']=gss_figname[0]
+            os.environ['DOWAAVE_GSS_F2']=gss_figname[1]
+            logging_fun("gauss_fig: {}".format(gss_figname))
             logging_fun("gauss exe in : {} [s]".format(time.time()-s_time))
             s_time=time.time()
             tft_figname=torch_dowaave_tft_nebajke.relife_tft(
@@ -169,9 +184,10 @@ class MEMEENUNE:
                 model_path=dwvc.tft_ALWAYS_SAVING_MODEL,
                 max_encoder_length=dwvc.tft_max_encoder_length,
                 max_prediction_length=dwvc.tft_max_prediction_length)
-            logging_fun("tft_fig1: {}".format(tft_figname))
+            logging_fun("tft_fig: {}".format(tft_figname))
             logging_fun("tft exe in : {} [s]".format(time.time()-s_time))
-            os.environ['DOWAAVE_TFT_F1']=tft_figname
+            os.environ['DOWAAVE_TFT_F1']=tft_figname[0]
+            os.environ['DOWAAVE_TFT_F2']=tft_figname[1]
         # --- --- --- --- 
         
         # s_time=time.time()

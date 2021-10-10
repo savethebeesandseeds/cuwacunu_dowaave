@@ -1,5 +1,6 @@
 # --- --- --- --- 
 import cwcn_dowaave_memeenune as dwvmm
+from cwcn_dwve_client_config import dwve_instrument_configuration as dwvc
 # --- --- --- --- 
 if __name__=='__main__':
     print("[WARNING] lower the horizont of prediction")
@@ -9,7 +10,7 @@ if __name__=='__main__':
     )
     c_memeenune.train_tff(
         working_dataframe,
-        ACTUAL_MODEL_PATH='lightning_logs/always_saving_tft.ckpt', # set to None for fresh start
+        reset=False, # meaning to reset the model or True is one wants to train the current model
     )
     # input()
     # working_dataframe = c_memeenune.c_data_kijtyu.load_and_get_dataframe(

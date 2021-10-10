@@ -15,7 +15,7 @@ from collections import defaultdict
 PAPER_INSTRUMENT = True #FIXME # < --- --- --- --- FAKE / REAL ; (bool) flag
 # --- --- --- --- 
 # --- --- --- SYMBOL INSTRUMENT MUST MATCH WHAT IS CONFIGURED ON CLIENT
-SYMBOL_INSTRUMENT = 'BTCUSDTPERP' #'BCHUSDTPERP' #'BTCUSDTPERP' #'SINE-100'#'BTCUSDTPERP' #'ADAUSDTPERP'/'BTCUSDTPERP'
+SYMBOL_INSTRUMENT = 'ETHUSDTPERP' #'BCHUSDTPERP' #'BTCUSDTPERP' #'SINE-100'#'BTCUSDTPERP' #'ADAUSDTPERP'/'BTCUSDTPERP'
 # --- --- 
 ACTIVE_ADHO_FIELD = [
     # 'unrealisedPNL',
@@ -34,6 +34,7 @@ ACTIVE_ADHO_FIELD = [
     'DOWAAVE_GSS_F1',
     'DOWAAVE_GSS_F2',
     'DOWAAVE_TFT_F1',
+    'DOWAAVE_TFT_F2',
     # --- --- --- 
     'price'
     # --- --- --- 
@@ -50,7 +51,7 @@ CLIENT_URL = '{}://{}:{}/'.format(CLIENT_PROTOL,CLIENT_DIR,CLIENT_PORT)
 # --- --- --- --- 
 # --- --- --- RENDER
 # --- --- 
-FRAMES_PER_SECOND = 2
+FRAMES_PER_SECOND = 60
 DOWAAVE_RENDER_MODE = 'terminal/gui' #'terminal'/'gui'
 DOWAAVE_BUFFER_SIZE = 1000
 SCREEN_RESOLUTION = [120,20] # x_size,y_size
@@ -156,7 +157,7 @@ PLOT_RENDER_BAO = [
     #     'xlabel':(lambda dwve_state, render : render['axis'].set_xlabel("X",fontsize=8)),
     #     'plot'  :(lambda dwve_state, render : render['axis'].plot(dwve_state['x_vals'],dwve_state['y_vals'],color='red')),
     #     # 'plot2'  :(lambda dwve_state, render : render['axis'].plot(dwve_state['x_vals'],-dwve_state['y_vals'],color='blue')),
-    #     'grid'  :(lambda dwve_state, render : render['axis'].grid(which='major',color='white',linestyle='-',linewidth=0.2)),
+            # 'grid'  :(lambda dwve_state, render : render['axis'].grid(which='major',color='white',linestyle='-',linewidth=0.2)),
     #     'tick'  :(lambda dwve_state, render : render['axis'].tick_params(colors='red',which='both')),
     #     'canvas':(lambda dwve_state, render : FigureCanvasTkAgg(render['figure'],master=render['window'])),
     #     'pack'  :(lambda dwve_state, render : render['canvas'].get_tk_widget().pack()),
@@ -173,19 +174,18 @@ PLOT_RENDER_BAO = [
     {
         'ID'    :'DOWAAVE_GSS_F1',
         'type'  :(lambda dwve_state, render : 'plot'),
-        'figure':(lambda dwve_state, render : Figure(figsize=(8,4),facecolor="black")),
+        'figure':(lambda dwve_state, render : Figure(facecolor="black")),
         'axis'  :(lambda dwve_state, render : render['figure'].add_subplot(111)),
         'facecolor':(lambda dwve_state, render : render['axis'].set_facecolor((0,0,0))),
         'title' :(lambda dwve_state, render : render['axis'].set_title("Estimation Grid", fontsize=8,color=(0,0,0))),
         # 'ylabel':(lambda dwve_state, render : render['axis'].set_ylabel("Y",fontsize=8)),
         # 'xlabel':(lambda dwve_state, render : render['axis'].set_xlabel("X",fontsize=8)),
-        # 'plot'  :(lambda dwve_state, render : render['axis'].plot(dwve_DOWAAVE_TFT_F1state['x_vals'],dwve_state['y_vals'],color='red')),
         # 'plot2'  :(lambda dwve_state, render : render['axis'].plot(dwve_state['x_vals'],-dwve_state['y_vals'],color='blue')),
         # 'grid'  :(lambda dwve_state, render : render['axis'].grid(which='major',color='white',linestyle='-',linewidth=0.2)),
         'tick'  :(lambda dwve_state, render : render['axis'].tick_params(colors='black',which='both')),
         'canvas':(lambda dwve_state, render : FigureCanvasTkAgg(render['figure'],master=render['window'])),
         'pack'  :(lambda dwve_state, render : render['canvas'].get_tk_widget().pack()),
-        'pos'   :(lambda dwve_state, render : render['canvas'].get_tk_widget().place(x=-100, y=0)),
+        'pos'   :(lambda dwve_state, render : render['canvas'].get_tk_widget().place(x=-50, y=-50)),
         'draw'  :(lambda dwve_state, render : render['canvas'].draw()),
         # 'update_clear'  :(lambda dwve_state, render : render['axis'].clear()),
         # 'update_x':(lambda dwve_state, render : render['plot'][0].set_xdata(dwve_state['x_vals'])),
@@ -198,19 +198,18 @@ PLOT_RENDER_BAO = [
     {
         'ID'    :'DOWAAVE_GSS_F2',
         'type'  :(lambda dwve_state, render : 'plot'),
-        'figure':(lambda dwve_state, render : Figure(figsize=(8,4),facecolor="black")),
+        'figure':(lambda dwve_state, render : Figure(facecolor="black")),
         'axis'  :(lambda dwve_state, render : render['figure'].add_subplot(111)),
         'facecolor':(lambda dwve_state, render : render['axis'].set_facecolor((0,0,0))),
         'title' :(lambda dwve_state, render : render['axis'].set_title("Estimation Grid", fontsize=8,color=(0,0,0))),
         # 'ylabel':(lambda dwve_state, render : render['axis'].set_ylabel("Y",fontsize=8)),
         # 'xlabel':(lambda dwve_state, render : render['axis'].set_xlabel("X",fontsize=8)),
-        # 'plot'  :(lambda dwve_state, render : render['axis'].plot(dwve_DOWAAVE_TFT_F1state['x_vals'],dwve_state['y_vals'],color='red')),
         # 'plot2'  :(lambda dwve_state, render : render['axis'].plot(dwve_state['x_vals'],-dwve_state['y_vals'],color='blue')),
         # 'grid'  :(lambda dwve_state, render : render['axis'].grid(which='major',color='white',linestyle='-',linewidth=0.2)),
         'tick'  :(lambda dwve_state, render : render['axis'].tick_params(colors='black',which='both')),
         'canvas':(lambda dwve_state, render : FigureCanvasTkAgg(render['figure'],master=render['window'])),
         'pack'  :(lambda dwve_state, render : render['canvas'].get_tk_widget().pack()),
-        'pos'   :(lambda dwve_state, render : render['canvas'].get_tk_widget().place(x=-100, y=350)),
+        'pos'   :(lambda dwve_state, render : render['canvas'].get_tk_widget().place(x=-50, y=335)),
         'draw'  :(lambda dwve_state, render : render['canvas'].draw()),
         # 'update_clear'  :(lambda dwve_state, render : render['axis'].clear()),
         # 'update_x':(lambda dwve_state, render : render['plot'][0].set_xdata(dwve_state['x_vals'])),
@@ -223,24 +222,47 @@ PLOT_RENDER_BAO = [
     {
         'ID'    :'DOWAAVE_TFT_F1',
         'type'  :(lambda dwve_state, render : 'plot'),
-        'figure':(lambda dwve_state, render : Figure(figsize=(10,10),facecolor="black")),
+        'figure':(lambda dwve_state, render : Figure(facecolor="black")),
         'axis'  :(lambda dwve_state, render : render['figure'].add_subplot(111)),
         'facecolor':(lambda dwve_state, render : render['axis'].set_facecolor((0,0,0))),
         'title' :(lambda dwve_state, render : render['axis'].set_title("Estimation Grid", fontsize=8,color=(0,0,0))),
         # 'ylabel':(lambda dwve_state, render : render['axis'].set_ylabel("Y",fontsize=8)),
         # 'xlabel':(lambda dwve_state, render : render['axis'].set_xlabel("X",fontsize=8)),
-        # 'plot'  :(lambda dwve_state, render : render['axis'].plot(dwve_DOWAAVE_TFT_F1state['x_vals'],dwve_state['y_vals'],color='red')),
         # 'plot2'  :(lambda dwve_state, render : render['axis'].plot(dwve_state['x_vals'],-dwve_state['y_vals'],color='blue')),
         # 'grid'  :(lambda dwve_state, render : render['axis'].grid(which='major',color='white',linestyle='-',linewidth=0.2)),
         'tick'  :(lambda dwve_state, render : render['axis'].tick_params(colors='black',which='both')),
         'canvas':(lambda dwve_state, render : FigureCanvasTkAgg(render['figure'],master=render['window'])),
         'pack'  :(lambda dwve_state, render : render['canvas'].get_tk_widget().pack()),
-        'pos'   :(lambda dwve_state, render : render['canvas'].get_tk_widget().place(x=450, y=-100)),
+        'pos'   :(lambda dwve_state, render : render['canvas'].get_tk_widget().place(x=450, y=-50)),
         'draw'  :(lambda dwve_state, render : render['canvas'].draw()),
         # 'update_clear'  :(lambda dwve_state, render : render['axis'].clear()),
         # 'update_x':(lambda dwve_state, render : render['plot'][0].set_xdata(dwve_state['x_vals'])),
         # 'update_y':(lambda dwve_state, render : render['plot'][0].set_ydata(dwve_state['y_vals'])),
         'update_img':(lambda dwve_state, render : render['axis'].imshow(dwve_state['DOWAAVE_TFT_F1']) if dwve_state['DOWAAVE_TFT_F1'] is not None else None),
+        'update_autoscale':(lambda dwve_state, render : render['axis'].autoscale_view()),
+        'update_draw'  :(lambda dwve_state, render : render['canvas'].draw()),
+        'update_flush'  :(lambda dwve_state, render : render['canvas'].flush_events()),
+    },
+    {
+        'ID'    :'DOWAAVE_TFT_F2',
+        'type'  :(lambda dwve_state, render : 'plot'),
+        'figure':(lambda dwve_state, render : Figure(facecolor="black")),
+        'axis'  :(lambda dwve_state, render : render['figure'].add_subplot(111)),
+        'facecolor':(lambda dwve_state, render : render['axis'].set_facecolor((0,0,0))),
+        'title' :(lambda dwve_state, render : render['axis'].set_title("Estimation Grid", fontsize=8,color=(0,0,0))),
+        # 'ylabel':(lambda dwve_state, render : render['axis'].set_ylabel("Y",fontsize=8)),
+        # 'xlabel':(lambda dwve_state, render : render['axis'].set_xlabel("X",fontsize=8)),
+        # 'plot2'  :(lambda dwve_state, render : render['axis'].plot(dwve_state['x_vals'],-dwve_state['y_vals'],color='blue')),
+        'grid'  :(lambda dwve_state, render : render['axis'].grid(which='major',color='white',linestyle='-',linewidth=0.2)),
+        'tick'  :(lambda dwve_state, render : render['axis'].tick_params(colors='black',which='both')),
+        'canvas':(lambda dwve_state, render : FigureCanvasTkAgg(render['figure'],master=render['window'])),
+        'pack'  :(lambda dwve_state, render : render['canvas'].get_tk_widget().pack()),
+        'pos'   :(lambda dwve_state, render : render['canvas'].get_tk_widget().place(x=450, y=335)),
+        'draw'  :(lambda dwve_state, render : render['canvas'].draw()),
+        # 'update_clear'  :(lambda dwve_state, render : render['axis'].clear()),
+        # 'update_x':(lambda dwve_state, render : render['plot'][0].set_xdata(dwve_state['x_vals'])),
+        # 'update_y':(lambda dwve_state, render : render['plot'][0].set_ydata(dwve_state['y_vals'])),
+        'update_img':(lambda dwve_state, render : render['axis'].imshow(dwve_state['DOWAAVE_TFT_F2']) if dwve_state['DOWAAVE_TFT_F2'] is not None else None),
         'update_autoscale':(lambda dwve_state, render : render['axis'].autoscale_view()),
         'update_draw'  :(lambda dwve_state, render : render['canvas'].draw()),
         'update_flush'  :(lambda dwve_state, render : render['canvas'].flush_events()),

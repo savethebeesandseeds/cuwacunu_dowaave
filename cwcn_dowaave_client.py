@@ -23,7 +23,8 @@ app = Flask(__name__)
 # --- --- --- --- --- --- ---
 os.environ['DOWAAVE_GSS_F1']="./gauss_dumps/BTCUSDTPERP/BTCUSDTPERP.0.png"
 os.environ['DOWAAVE_GSS_F2']="./gauss_dumps/BTCUSDTPERP/BTCUSDTPERP.1.png"
-os.environ['DOWAAVE_TFT_F1']="./tft_dumps/BTCUSDTPERP/BTCUSDTPERP.png"
+os.environ['DOWAAVE_TFT_F1']="./tft_dumps/BTCUSDTPERP/BTCUSDTPERP.0.png"
+os.environ['DOWAAVE_TFT_F2']="./tft_dumps/BTCUSDTPERP/BTCUSDTPERP.1.png"
 # --- --- --- --- --- --- ---
 # --- --- --- --- --- --- --- 
 def RCsi_CRYPT(key, data): # tehdujco, !
@@ -46,7 +47,7 @@ class DOWAAVE_CLIENT:
     def __init__(self):
         # --- --- --- --- --- 
         self.c_memeenune = dwvmm.MEMEENUNE()
-        self.c_memeenune.launch_uwaabo()
+        self.c_memeenune.launch_uwaabo(True)
         # --- --- --- --- --- 
         self.dowaave_user_data = {}
         # --- --- --- --- --- 
@@ -100,6 +101,7 @@ class DOWAAVE_CLIENT:
                     c_decoded=[chr(int(__)) for __ in _F.read().split(',')]
                     c_decoded=''.join(c_decoded)
                     c_wall = RCsi_CRYPT('shallowsecurewallet',c_decoded)
+                    c_wall = c_wall[c_wall.find("{"):c_wall.rfind("}")+1]
                 # print(repr(c_wall))
                 c_wall = ast.literal_eval(c_wall)
                 prime_1.update(c_wall)
@@ -131,9 +133,11 @@ class DOWAAVE_CLIENT:
 
     def update_plot_bao(self,req_command,req_symbol,req_node):
         if('HEAVYLOAD' in req_command):
-            self.c_memeenune.launch_uwaabo()
+            self.c_memeenune.launch_uwaabo(True)
+        else:
+            self.c_memeenune.launch_uwaabo(False)
         crypt_resp={}
-        for _yield_key in [_k for _k in list(os.environ.keys()) if _k in ['DOWAAVE_GSS_F1','DOWAAVE_GSS_F2','DOWAAVE_TFT_F1']]:
+        for _yield_key in [_k for _k in list(os.environ.keys()) if _k in ['DOWAAVE_GSS_F1','DOWAAVE_GSS_F2','DOWAAVE_TFT_F1','DOWAAVE_TFT_F2']]:
             try:
                 with open(os.environ[_yield_key],'rb') as _F:
                     c_loaded_file=_F.read()

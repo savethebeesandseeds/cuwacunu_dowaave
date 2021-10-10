@@ -15,12 +15,13 @@ import websockets
 from urllib.parse import urljoin
 # --- --- --- --- 
 import asyncio
+import ast
 import os
 import sys
 import logging
 # sys.path.append('../kijtyu')
 sys.path.append('../')
-import cwcn_dwve_client_config as dwvc
+import cwcn_dwve_client_config as dwvcc
 # --- --- --- --- 
 import rcsi_utils
 import communications_config
@@ -38,9 +39,10 @@ import communications_config
 def print_method(msg):
     print("[unrealizedalliu comming from poloniex :] {}".format(msg))
 class EXCHANGE_INSTRUMENT:
-    def __init__(self, _message_wrapper_=None, _websocket_subs=None, _is_farm=False):
+    def __init__(self, _message_wrapper_=None, _websocket_subs=None, _is_farm=False, _is_front=False):
         self._is_farm=_is_farm
-        if(not _is_farm):
+        self._is_front=_is_front
+        if(not _is_farm and not _is_front):
             print_method("[start:] EXCHANGE INSTRUMENT")
             # --- --- --- 
             if(_message_wrapper_ is not None):
@@ -78,10 +80,8 @@ class EXCHANGE_INSTRUMENT:
             self.market_instrument = self.rest_client.market_api()
             self._farm_files = {}
             self._initialize_ticker_data_farm_()
-            self._second_message_wrapper_=_message_wrapper_
-            self.ws_farm_client = WsClient(\
-                # self._farm_on_message_ if _message_wrapper_ is None else _message_wrapper_, 
-                self._farm_on_message_, 
+            self.ws_client = WsClient(\
+                self._farm_on_message_ if _message_wrapper_ is None else _message_wrapper_, 
                 key=rcsi_utils.RCsi_CRYPT(communications_config.PLX_FUT_ADA_CONFIG.RCsi_KEY,communications_config.PLX_FUT_ADA_CONFIG.API_KEY), 
                 secret=rcsi_utils.RCsi_CRYPT(communications_config.PLX_FUT_ADA_CONFIG.RCsi_KEY,communications_config.PLX_FUT_ADA_CONFIG.API_SECRET), 
                 passphrase=rcsi_utils.RCsi_CRYPT(communications_config.PLX_FUT_ADA_CONFIG.RCsi_KEY,communications_config.PLX_FUT_ADA_CONFIG.API_PASS)
@@ -91,8 +91,9 @@ class EXCHANGE_INSTRUMENT:
             if(_websocket_subs is not None):
                 for _wss in _websocket_subs:
                     loop.run_until_complete(self._subcribe_websocket_(_wss))
-            for _farm_itm in dwvc.CWCN_FARM_CONFIG.FARM_SYMBOLS:
-                loop.run_until_complete(self._subcribe_websocket_('/contractMarket/ticker:{}'.format(_farm_itm)))
+            if(not _is_front):
+                for _farm_itm in dwvcc.CWCN_FARM_CONFIG.FARM_SYMBOLS:
+                    loop.run_until_complete(self._subcribe_websocket_('/contractMarket/ticker:{}'.format(_farm_itm)))
             # loop = asyncio.new_event_loop()
             # asyncio.run(self._connect_socket_())
             # loop.close()
@@ -102,55 +103,81 @@ class EXCHANGE_INSTRUMENT:
     # --- --- --- 
     async def _connect_socket_(self):
         print_method("[connect:] EXCHANGE INSTRUMENT socket")
-        if(not self._is_farm):
-            await self.ws_client.connect()
-        else:
-            await self.ws_farm_client.connect()
+        await self.ws_client.connect()
         print_method("[connected:] EXCHANGE INSTRUMENT socket")
     async def _disconect_socket_(self):
         print_method("[disconect:] EXCHANGE INSTRUMENT socket")
-        if(not self._is_farm):
-            await self.ws_client.disconnect()
-        else:
-            await self.ws_farm_client.disconnect()
+        await self.ws_client.disconnect()
         print_method("[disconected:] EXCHANGE INSTRUMENT socket")
     # --- --- --- --- 
     def _farm_on_message_(self,msg):
         # print(msg)
-        if "/contractMarket/ticker:" in msg['topic']:
-            try:
-                with open(self._farm_files[msg['data']['symbol']],"a+") as _F: 
-                    _F.write("{},\n".format(msg['data']))
-                # print_method(f'Get {msg["data"]["symbol"]} Ticket :{msg["data"]} : unix time : {time.time()}')
-                sys.stdout.write(dwvc.CWCN_CURSOR.CARRIER_RETURN)
-                sys.stdout.write(dwvc.CWCN_CURSOR.CLEAR_LINE)
-                sys.stdout.write('[{}]; price: {}, time: {}'.format(msg['data']['symbol'],msg['data']['price'],msg['data']['ts']))
-                sys.stdout.write(dwvc.CWCN_CURSOR.CARRIER_RETURN)
-                sys.stdout.flush()
-            except Exception as e:
-                print("error! {}".format(e))
-        if(self._second_message_wrapper_ is not None):
-            self._second_message_wrapper_(msg)
+        if(self._is_farm):
+            if "/contractMarket/ticker:" in msg['topic']:
+                try:
+                    with open(self._farm_files[msg['data']['symbol']],"a+") as _F: 
+                        _F.write("{},\n".format(msg['data']))
+                    # print_method(f'Get {msg["data"]["symbol"]} Ticket :{msg["data"]} : unix time : {time.time()}')
+                    sys.stdout.write(dwvcc.CWCN_CURSOR.CARRIER_RETURN)
+                    sys.stdout.write(dwvcc.CWCN_CURSOR.CLEAR_LINE)
+                    sys.stdout.write('[{}]; price: {}, time: {}'.format(msg['data']['symbol'],msg['data']['price'],msg['data']['ts']))
+                    sys.stdout.write(dwvcc.CWCN_CURSOR.CARRIER_RETURN)
+                    sys.stdout.flush()
+                except Exception as e:
+                    print("error! {}".format(e))
+        if(self._is_front):
+            if("/contractAccount/wallet" in msg['topic'] or "/contract/position:" in msg['topic']):
+                try:
+                    c_wall={}
+                    if(os.path.isfile(dwvcc.CWCN_FARM_CONFIG.FRONT_WALLET_FILE)):
+                        with open(dwvcc.CWCN_FARM_CONFIG.FRONT_WALLET_FILE,"r",encoding='utf-8') as _F:
+                            # c_wall = rcsi_utils.RCsi_CRYPT('shallowsecurewallet',_F.read())
+                            readed_content=_F.read()
+                            print(readed_content)
+                            c_decoded=[chr(int(__)) for __ in readed_content.split(',') if __!='']
+                            c_decoded=''.join(c_decoded)
+                            c_wall = rcsi_utils.RCsi_CRYPT('shallowsecurewallet',c_decoded)
+                            print("waka 1: {}".format(c_wall))
+                            c_wall = c_wall[c_wall.find("{"):c_wall.rfind("}")+1]
+                            print("waka 2: {}".format(c_wall))
+                        print("waka 3: {}".format(c_wall))
+                        c_wall = ast.literal_eval("{}".format(c_wall))
+                    c_wall.update(msg['data'])
+                    # print("[UPDATE:] c_wall : {}".format(c_wall))
+                    with open(dwvcc.CWCN_FARM_CONFIG.FRONT_WALLET_FILE,"w+",encoding='utf-8') as _F:
+                        # _F.write("{}".format(rcsi_utils.RCsi_CRYPT('shallowsecurewallet','{}'.format(c_wall))))
+                        c_encoded = "{}".format(rcsi_utils.RCsi_CRYPT('shallowsecurewallet','{}'.format(c_wall)))
+                        c_encoded = ','.join([str(ord(__)) for __ in c_encoded])
+                        _F.write(c_encoded)
+                    # print_method(f'Get {msg["data"]["symbol"]} Ticket :{msg["data"]} : unix time : {time.time()}')
+                    sys.stdout.write(dwvcc.CWCN_CURSOR.CARRIER_RETURN)
+                    sys.stdout.write(dwvcc.CWCN_CURSOR.CLEAR_LINE)
+                    # sys.stdout.write('[WALLET UPDATE:] {}'.format(msg['data']))
+                    sys.stdout.write('[WALLET UPDATE:]')
+                    sys.stdout.write(dwvcc.CWCN_CURSOR.CARRIER_RETURN)
+                    sys.stdout.flush()
+                except Exception as e:
+                    print("FORNT ERROR! {}".format(e))
     # def _on_message_(self,msg):
-    #     if msg['topic'] == f'/contract/instrument:{dwvc.CWCN_INSTRUMENT_CONFIG.SYMBOL}':
-    #         print_method(f'Get {dwvc.CWCN_INSTRUMENT_CONFIG.SYMBOL} Index Price: {msg["data"]} : unix time : {time.time()}')
-    #     elif msg['topic'] == f'/contractMarket/execution:{dwvc.CWCN_INSTRUMENT_CONFIG.SYMBOL}':
+    #     if msg['topic'] == f'/contract/instrument:{dwvcc.CWCN_INSTRUMENT_CONFIG.SYMBOL}':
+    #         print_method(f'Get {dwvcc.CWCN_INSTRUMENT_CONFIG.SYMBOL} Index Price: {msg["data"]} : unix time : {time.time()}')
+    #     elif msg['topic'] == f'/contractMarket/execution:{dwvcc.CWCN_INSTRUMENT_CONFIG.SYMBOL}':
     #         print_method(f'Last Execution: {msg["data"]} : unix time : {time.time()}')
-    #     elif msg['topic'] == f'/contractMarket/level2:{dwvc.CWCN_INSTRUMENT_CONFIG.SYMBOL}':
-    #         print_method(f'Get {dwvc.CWCN_INSTRUMENT_CONFIG.SYMBOL} Level 2 :{msg["data"]} : unix time : {time.time()}')
-    #     elif msg['topic'] == f'/contractMarket/ticker:{dwvc.CWCN_INSTRUMENT_CONFIG.SYMBOL}':
-    #         print_method(f'Get {dwvc.CWCN_INSTRUMENT_CONFIG.SYMBOL} Ticket :{msg["data"]} : unix time : {time.time()}')
+    #     elif msg['topic'] == f'/contractMarket/level2:{dwvcc.CWCN_INSTRUMENT_CONFIG.SYMBOL}':
+    #         print_method(f'Get {dwvcc.CWCN_INSTRUMENT_CONFIG.SYMBOL} Level 2 :{msg["data"]} : unix time : {time.time()}')
+    #     elif msg['topic'] == f'/contractMarket/ticker:{dwvcc.CWCN_INSTRUMENT_CONFIG.SYMBOL}':
+    #         print_method(f'Get {dwvcc.CWCN_INSTRUMENT_CONFIG.SYMBOL} Ticket :{msg["data"]} : unix time : {time.time()}')
     #     else:
     #         print_method(msg)
     # --- --- --- --- 
     def _initialize_ticker_data_farm_(self, _farm_data_root = None):
-        _farm_data_root = _farm_data_root if _farm_data_root is not None else dwvc.CWCN_FARM_CONFIG.FARM_FOLDER
+        _farm_data_root = _farm_data_root if _farm_data_root is not None else dwvcc.CWCN_FARM_CONFIG.FARM_FOLDER
         if(not os.path.exists(_farm_data_root)):
             os.makedirs(_farm_data_root)
-        for _farm_itm in dwvc.CWCN_FARM_CONFIG.FARM_SYMBOLS:
-            itm_file_path=os.path.join(_farm_data_root,'{}{}'.format(_farm_itm,dwvc.CWCN_FARM_CONFIG.FARM_DATA_EXTENSION))
+        for _farm_itm in dwvcc.CWCN_FARM_CONFIG.FARM_SYMBOLS:
+            itm_file_path=os.path.join(_farm_data_root,'{}{}'.format(_farm_itm,dwvcc.CWCN_FARM_CONFIG.FARM_DATA_EXTENSION))
             if(os.path.exists(itm_file_path)):
-                bkup_itm_file_path=os.path.join(_farm_data_root,'{}.bkup{}'.format(_farm_itm,dwvc.CWCN_FARM_CONFIG.FARM_DATA_EXTENSION))
+                bkup_itm_file_path=os.path.join(_farm_data_root,'{}.bkup{}'.format(_farm_itm,dwvcc.CWCN_FARM_CONFIG.FARM_DATA_EXTENSION))
                 print("[Saving in backup :] {}".format(bkup_itm_file_path))
                 with open(itm_file_path,"r") as c_file:
                     lines=c_file.readlines()
@@ -172,43 +199,37 @@ class EXCHANGE_INSTRUMENT:
         print_method("[_initialized_ FARM:]")
     # --- --- --- --- 
     async def _subcribe_websocket_(self,_subcribe_path):
-        if(not self._is_farm):
-            await self.ws_client.subscribe(_subcribe_path)
-        else:
-            await self.ws_farm_client.subscribe(_subcribe_path)
+        await self.ws_client.subscribe(_subcribe_path)
         print_method(" +++ [SUSCRIBED :] {}".format(_subcribe_path))
     async def _unsubcribe_websocket_(self,_unsubcribe_path):
-        if(not self._is_farm):
-            await self.ws_client.unsubscribe(_unsubcribe_path)
-        else:
-            await self.ws_farm_client.unsubscribe(_unsubcribe_path)
+        await self.ws_client.unsubscribe(_unsubcribe_path)
         print_method(" --- [UNSUSCRIBED :] {}".format(_unsubcribe_path))
     # --- --- --- --- 
 
     # --- --- --- --- 
     # async def _ws_methods_(self):
-    #     # await self.ws_client.subscribe(f'/contract/instrument:{dwvc.CWCN_INSTRUMENT_CONFIG.SYMBOL}')
-    #     # await self.ws_client.subscribe(f'/contractMarket/execution:{dwvc.CWCN_INSTRUMENT_CONFIG.SYMBOL}')
-    #     # await self.ws_client.subscribe(f'/contractMarket/level2:{dwvc.CWCN_INSTRUMENT_CONFIG.SYMBOL}')
-    #     # await self.ws_client.subscribe(f'/contractMarket/level2:{dwvc.CWCN_INSTRUMENT_CONFIG.SYMBOL}')
-    #     await self.ws_client.subscribe(f'/contractMarket/ticker:{dwvc.CWCN_INSTRUMENT_CONFIG.SYMBOL}')
+    #     # await self.ws_client.subscribe(f'/contract/instrument:{dwvcc.CWCN_INSTRUMENT_CONFIG.SYMBOL}')
+    #     # await self.ws_client.subscribe(f'/contractMarket/execution:{dwvcc.CWCN_INSTRUMENT_CONFIG.SYMBOL}')
+    #     # await self.ws_client.subscribe(f'/contractMarket/level2:{dwvcc.CWCN_INSTRUMENT_CONFIG.SYMBOL}')
+    #     # await self.ws_client.subscribe(f'/contractMarket/level2:{dwvcc.CWCN_INSTRUMENT_CONFIG.SYMBOL}')
+    #     await self.ws_client.subscribe(f'/contractMarket/ticker:{dwvcc.CWCN_INSTRUMENT_CONFIG.SYMBOL}')
     # def _market_methods_(self):
     #     # Fetch MarketData
     #     # server_time = self.market_instrument.get_server_timestamp()
     #     # print_method("[server_time:] {}".format(json.dumps(server_time,sort_keys=True,indent=4)))
-    #     # l3_depth = self.market_instrument.get_l3_order_book(dwvc.CWCN_INSTRUMENT_CONFIG.SYMBOL)
+    #     # l3_depth = self.market_instrument.get_l3_order_book(dwvcc.CWCN_INSTRUMENT_CONFIG.SYMBOL)
     #     # print_method("[l3_depth:] {}".format(json.dumps(l3_depth,sort_keys=True,indent=4)))
-    #     # l2_depth = self.market_instrument.get_l2_order_book(dwvc.CWCN_INSTRUMENT_CONFIG.SYMBOL)
+    #     # l2_depth = self.market_instrument.get_l2_order_book(dwvcc.CWCN_INSTRUMENT_CONFIG.SYMBOL)
     #     # print_method("[l2_depth:] {}".format(json.dumps(l2_depth,sort_keys=True,indent=4)))
-    #     klines = self.market_instrument.get_ticker(dwvc.CWCN_INSTRUMENT_CONFIG.SYMBOL)
+    #     klines = self.market_instrument.get_ticker(dwvcc.CWCN_INSTRUMENT_CONFIG.SYMBOL)
     #     print_method("[klines:] {}".format(json.dumps(klines,sort_keys=True,indent=4)))
     #     pass
     # def _trade_methods_(self):
     #     # Trade Functions
     #     # cancel_id = trade_instrument.cancel_order(order_id['orderId'])
-    #     # order_id = trade_instrument.create_limit_order(dwvc.CWCN_INSTRUMENT_CONFIG.SYMBOL, 'buy', '1', '30', '8600')
-    #     # order_id = trade_instrument.create_limit_order(dwvc.CWCN_INSTRUMENT_CONFIG.SYMBOL, 'buy', '1', '30', '8600')
-    #     # cancel_all = trade_instrument.cancel_all_limit_orders(dwvc.CWCN_INSTRUMENT_CONFIG.SYMBOL)
+    #     # order_id = trade_instrument.create_limit_order(dwvcc.CWCN_INSTRUMENT_CONFIG.SYMBOL, 'buy', '1', '30', '8600')
+    #     # order_id = trade_instrument.create_limit_order(dwvcc.CWCN_INSTRUMENT_CONFIG.SYMBOL, 'buy', '1', '30', '8600')
+    #     # cancel_all = trade_instrument.cancel_all_limit_orders(dwvcc.CWCN_INSTRUMENT_CONFIG.SYMBOL)
     #     pass
     # def _user_methods_(self):
     #     # User Account Functions
@@ -650,8 +671,10 @@ class TradeClient:
             'clientOid': client_oid
         }
 
+
         if kwargs:
             params.update(kwargs)
+        print("create_market_order: {}".format(kwargs)) #waka
 
         return self._request('POST', '/api/v1/orders', params, True)
 
@@ -990,26 +1013,26 @@ if __name__=='__main__':
 
     # time.sleep(30)
     # c_trade_instrument._market_methods_()
-    # print_method(json.dumps(c_trade_instrument.market_instrument.get_trade_history(dwvc.CWCN_INSTRUMENT_CONFIG.SYMBOL),indent=4))
+    # print_method(json.dumps(c_trade_instrument.market_instrument.get_trade_history(dwvcc.CWCN_INSTRUMENT_CONFIG.SYMBOL),indent=4))
     # asyncio.run(c_trade_instrument._ws_methods_())
     # asyncio.run(c_trade_instrument._initialize_ticker_data_farm_())
     # c_trade_instrument._user_methods_()
     # print_method("get_account_overview:")
     # print_method(json.dumps(c_trade_instrument.user_instrument.get_account_overview(),indent=4))
     # print_method("get_position_details:")
-    # print_method(json.dumps(c_trade_instrument.trade_instrument.get_position_details(dwvc.CWCN_INSTRUMENT_CONFIG.SYMBOL),indent=4))
+    # print_method(json.dumps(c_trade_instrument.trade_instrument.get_position_details(dwvcc.CWCN_INSTRUMENT_CONFIG.SYMBOL),indent=4))
     # print_method("get_all_positions:")
     # print_method(json.dumps(c_trade_instrument.trade_instrument.get_all_positions(),indent=4))
 
     # print_method("get_ticker:")
-    # print_method(json.dumps(c_trade_instrument.market_instrument.get_ticker(dwvc.CWCN_INSTRUMENT_CONFIG.SYMBOL),indent=4))
+    # print_method(json.dumps(c_trade_instrument.market_instrument.get_ticker(dwvcc.CWCN_INSTRUMENT_CONFIG.SYMBOL),indent=4))
 
     # print_method("create_market_order: sell")
     # order_data=c_trade_instrument.trade_instrument.create_market_order(
-    #     symbol=dwvc.CWCN_INSTRUMENT_CONFIG.SYMBOL,
+    #     symbol=dwvcc.CWCN_INSTRUMENT_CONFIG.SYMBOL,
     #     side='sell',
     #     size=1,
-    #     leverage=dwvc.CWCN_INSTRUMENT_CONFIG.LEVERAGE)
+    #     leverage=dwvcc.CWCN_INSTRUMENT_CONFIG.LEVERAGE)
     # print_method(json.dumps(order_data,indent=4))
     # print_method("delay:")
     # time.sleep(10)
@@ -1017,7 +1040,7 @@ if __name__=='__main__':
 
 
     # print_method("get_position_details:")
-    # print_method(json.dumps(c_trade_instrument.trade_instrument.get_position_details(dwvc.CWCN_INSTRUMENT_CONFIG.SYMBOL),indent=4))
+    # print_method(json.dumps(c_trade_instrument.trade_instrument.get_position_details(dwvcc.CWCN_INSTRUMENT_CONFIG.SYMBOL),indent=4))
     # # print_method("get_order_list:")
     # # print_method(json.dumps(c_trade_instrument.trade_instrument.get_order_list(),indent=4))
     # print_method("get_order_details:")
@@ -1028,12 +1051,12 @@ if __name__=='__main__':
     # # print_method(json.dumps(cancel_order_details,indent=4))
     # print_method("create_market_order: buy")
     # order_data=c_trade_instrument.trade_instrument.create_market_order(
-    #     symbol=dwvc.CWCN_INSTRUMENT_CONFIG.SYMBOL,
+    #     symbol=dwvcc.CWCN_INSTRUMENT_CONFIG.SYMBOL,
     #     side='buy',
     #     size=1,
-    #     leverage=dwvc.CWCN_INSTRUMENT_CONFIG.LEVERAGE)
+    #     leverage=dwvcc.CWCN_INSTRUMENT_CONFIG.LEVERAGE)
     # print_method(json.dumps(order_data,indent=4))
     # print_method("get_account_overview:")
     # print_method(json.dumps(c_trade_instrument.user_instrument.get_account_overview(),indent=4))
     # print_method("cancel_all_orders:")
-    # print_method(json.dumps(c_trade_instrument.trade_instrument.cancel_all_orders(dwvc.CWCN_INSTRUMENT_CONFIG.SYMBOL),indent=4))
+    # print_method(json.dumps(c_trade_instrument.trade_instrument.cancel_all_orders(dwvcc.CWCN_INSTRUMENT_CONFIG.SYMBOL),indent=4))

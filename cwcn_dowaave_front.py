@@ -36,37 +36,12 @@ if __name__ == '__main__':
         while True:
             await asyncio.sleep(30000)
     # --- --- --- --- --- --- --- 
-    def _front_on_message_(self,msg):
-        if("/contractAccount/wallet" in msg['topic'] or "/contract/position" in msg['topic']):
-            try:
-                c_wall={}
-                if(os.path.isfile(dwvcc.CWCN_FARM_CONFIG.FRONT_WALLET_FILE)):
-                    with open(dwvcc.CWCN_FARM_CONFIG.FRONT_WALLET_FILE,"r",encoding='utf-8') as _F:
-                        # c_wall = RCsi_CRYPT('shallowsecurewallet',_F.read())
-                        c_decoded=[chr(int(__)) for __ in _F.read().split(',')]
-                        c_decoded=''.join(c_decoded)
-                        c_wall = RCsi_CRYPT('shallowsecurewallet',c_decoded)
-                    c_wall = ast.literal_eval(c_wall)
-                c_wall.update(msg['data'])
-                print("[UPDATE:] c_wall : {}".format(c_wall))
-                with open(dwvcc.CWCN_FARM_CONFIG.FRONT_WALLET_FILE,"w+",encoding='utf-8') as _F:
-                    # _F.write("{}".format(RCsi_CRYPT('shallowsecurewallet','{}'.format(c_wall))))
-                    c_encoded = "{}".format(RCsi_CRYPT('shallowsecurewallet','{}'.format(c_wall)))
-                    c_encoded = ','.join([str(ord(__)) for __ in c_encoded])
-                    _F.write(c_encoded)
-                # print_method(f'Get {msg["data"]["symbol"]} Ticket :{msg["data"]} : unix time : {time.time()}')
-                sys.stdout.write(dwvcc.CWCN_CURSOR.CARRIER_RETURN)
-                sys.stdout.write(dwvcc.CWCN_CURSOR.CLEAR_LINE)
-                sys.stdout.write('WALLET UPDATE : {}'.format(msg['data']))
-                sys.stdout.write(dwvcc.CWCN_CURSOR.CARRIER_RETURN)
-                sys.stdout.flush()
-            except Exception as e:
-                print("FORNT ERROR! {}".format(e))
     # --- --- --- --- --- --- --- 
     c_trade_instrument = poloniex_api.EXCHANGE_INSTRUMENT(
-        _message_wrapper_=_front_on_message_, 
+        # _message_wrapper_=_front_on_message_, 
         _websocket_subs=['/contractAccount/wallet', '/contract/position:{}'.format(dwvcc.dwve_instrument_configuration.SYMBOL)],
-        _is_farm=True)
+        _is_farm=False,
+        _is_front=True)
     # --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- 
     loop=asyncio.get_event_loop()
     loop.run_until_complete(wait_forever())

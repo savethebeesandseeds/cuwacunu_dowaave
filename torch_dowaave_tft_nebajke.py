@@ -139,17 +139,18 @@ def logging_fun(msg):
 # # --- --- --- --- --- 
 
 def train_tft(working_dataframe,
-    ALWAYS_SAVING_MODEL='lightning_logs/always_saving_tft.ckpt',
-    ACTUAL_MODEL_PATH=None,#'lightning_logs/default/version_23/checkpoints/epoch=0-step=29.ckpt',
+    ALWAYS_SAVING_MODEL=dwvc.tft_ALWAYS_SAVING_MODEL,
+    ACTUAL_MODEL_PATH=dwvc.tft_ACTUAL_MODEL_PATH,#'lightning_logs/default/version_23/checkpoints/epoch=0-step=29.ckpt',
+    DO_TUNNIN=dwvc.tft_DO_TUNNIN,
     JUST_LOAD=False, # meaning False when training is needed,
-    DO_TUNNIN=False,
-    FIND_OPTMAL_LR=False,
-    LEARNING_RATE=0.03, # 0.12
-    max_prediction_length=24,
-    max_encoder_length=100,
-    validation_porcentaje=0.12,
-    n_epochs=100,
-    batch_size=64): # from the data to the model .ckpt
+    FIND_OPTMAL_LR=dwvc.tft_FIND_OPTMAL_LR,
+    LEARNING_RATE=dwvc.tft_LEARNING_RATE,
+    max_prediction_length=dwvc.tft_max_prediction_length,
+    max_encoder_length=dwvc.tft_max_encoder_length,
+    validation_porcentaje=dwvc.tft_validation_porcentaje,
+    n_epochs=dwvc.tft_n_epochs,
+    batch_size=dwvc.tft_batch_size): # from the data to the model .ckpt
+
     # --- --- --- --- --- BUILDING THE TEMPORAL FUSION TRANSFORMER
     validation_size = int((working_dataframe["INDEX"].max()-working_dataframe["INDEX"].min())*validation_porcentaje)
     validation_size = validation_size - validation_size%max_prediction_length
@@ -335,10 +336,10 @@ def train_tft(working_dataframe,
                 tft = TemporalFusionTransformer.from_dataset(
                     training,
                     learning_rate=LEARNING_RATE,
-                    hidden_size=108,
-                    attention_head_size=2,
+                    hidden_size=512,
+                    attention_head_size=24,
                     dropout=0.1,
-                    hidden_continuous_size=8,
+                    hidden_continuous_size=16,
                     output_size=21,  # 7 quantiles by default
                     loss=QuantileLoss(),#QuantileLoss(),
                     log_interval=10,  # uncomment for learning rate finder and otherwise, e.g. to 10 for logging every 10 batches
@@ -359,6 +360,7 @@ def train_tft(working_dataframe,
         logging_fun("best model path : {}".format(ACTUAL_MODEL_PATH))
         # --- --- --- --- --- 
         os.system('cp {} {}'.format(ACTUAL_MODEL_PATH,ALWAYS_SAVING_MODEL))
+        print('saving a copy of the trained model into : {}'.format(ALWAYS_SAVING_MODEL))
         # --- --- --- --- --- 
     tft_model = TemporalFusionTransformer.load_from_checkpoint(ALWAYS_SAVING_MODEL)
     # --- --- --- --- --- TEST THE MODEL
@@ -375,7 +377,7 @@ def train_tft(working_dataframe,
     raw_predictions, x = tft_model.predict(val_dataloader, mode="raw", return_x=True)
     # --- --- --- --- ---
     import random
-    for idx in range(10):  # plot 10    examples
+    for idx in range(30):  # plot 10    examples
         # print(x.keys())
         # print(raw_predictions.keys())
         # tft_model.plot_prediction(x, raw_predictions, idx=idx, plot_attention=True, add_loss_to_title=True)
@@ -419,8 +421,10 @@ def relife_tft(
     # input()
     new_raw_predictions, new_x = tft_model.predict(predict_data, mode="raw", return_x=True)
     # --- --- --- --- --- 
-    fig_, (ax1,ax2,ax3) = plt.subplots(1,3, gridspec_kw={'width_ratios': [1,6,2]})
-    # fig_.legend().set_visible(False)
+    fig_1, (ax1) = plt.subplots(1,1, gridspec_kw={'width_ratios': [1]})
+    fig_2, (ax2,ax3) = plt.subplots(1,2, gridspec_kw={'width_ratios': [6,2]})
+    # fig_1.legend().set_visible(False)
+    # fig_2.legend().set_visible(False)
     # # --- --- 
     # print("new_x : {}".format(new_x.keys()))
     # print("new_x : {}".format([new_x[_].shape for _ in list(new_x.keys())]))
@@ -440,10 +444,24 @@ def relife_tft(
     # ax1.margins(x=0,y=-0.25)
     # --- --- 
     # --- ---
-    tft_model.plot_prediction(new_x, new_raw_predictions, idx=0, ax=ax1, show_future_observed=False)
-    # ax1.get_lines()[0].set_color("green")
-    ax1.axis(xmin=0,xmax=new_x['decoder_cont'].size()[1])#,ymin=,ymax=)
-    ax1.margins(x=0,y=0.25)
+    f_ret=tft_model.plot_prediction(new_x, new_raw_predictions, idx=0, ax=ax1, show_future_observed=False)
+    ax1.get_lines()[0].set_color("white")
+    ax1.get_lines()[0].set_linewidth(0.8)
+    ax1.get_lines()[0].set_alpha(0.8)
+    handles, labels = ax1.get_legend_handles_labels()
+    # print(labels)
+    # handles[0].visible=False
+    # handles[1].visible=False
+    # print(f_ret)
+    # print(handles)
+    # f_ret.legend(labelcolor='white',frameon=False,framealpha=0.1,facecolor='black')
+    # ax1.legend(labelcolor='red',frameon=False,framealpha=0.1,loc=10)
+    # f_ret.legend().remove()
+    # handles[1].remove()
+    # print(handles)
+    # input()
+    # ax1.axis(xmin=0,xmax=new_x['decoder_cont'].size()[1])#,ymin=,ymax=)
+    # ax1.margins(x=0,y=0.25)
     # ax1.axis(xmin=-new_x['encoder_cont'].size()[1],xmax=0,ymin=0.999*min(encoder_data['price'].to_list()),ymax=1.001*max(encoder_data['price'].to_list()))
     # ax1.get_lines()[1].set_color("white")
     # tft_model.plot_prediction(new_x, new_raw_predictions, idx=0, ax=ax2, show_future_observed=False)
@@ -463,7 +481,7 @@ def relife_tft(
     c_delast=delast(np.array(encoder_data['price'].to_list()))
     p_defirst=defirst(ax1.get_lines()[1]._y)
     # --- --- --- --- 
-    ax2.plot(c_delast,color='green',linewidth=0.25)
+    ax2.plot(c_delast,color='green',linewidth=0.45)
     # --- --- --- --- 
     ax3.plot(p_defirst,color='orange')
     for ctx_ in range(new_raw_predictions['prediction'].size()[2]):
@@ -483,8 +501,9 @@ def relife_tft(
     # ax3.plot(new_raw_predictions['prediction'][0,:,6].detach().cpu())
     # --- --- 
     # plt.legend(frameon=False)
-    fig_.patch.set_facecolor((0,0,0))
-    ax1.set_facecolor((0,0,0))
+    fig_1.patch.set_facecolor((114/255,47/255,55/255))
+    fig_2.patch.set_facecolor((0,0,0))
+    ax1.set_facecolor((114/255,47/255,55/255))
     ax2.set_facecolor((0,0,0))
     ax3.set_facecolor((0,0,0))
     # ax1.legend().set_visible(False)
@@ -517,10 +536,16 @@ def relife_tft(
     assert_folder(wlot_path)
     # figname=os.path.join(wlot_path,"{}.png".format(working_dataframe['symbol'].iloc[-1]))
     # figname=os.path.join(wlot_path,"{}-{}.png".format(working_dataframe['symbol'].iloc[-1],uuid.uuid4()))
-    figname=os.path.join(wlot_path,"{}.png".format(working_dataframe['symbol'].iloc[-1]))
-    plt.savefig(figname, dpi=tft_dpi, facecolor='black', edgecolor='black',
+    figname_1=os.path.join(wlot_path,"{}.0.png".format(working_dataframe['symbol'].iloc[-1]))
+    figname_2=os.path.join(wlot_path,"{}.1.png".format(working_dataframe['symbol'].iloc[-1]))
+    fig_1.savefig(figname_1, dpi=tft_dpi, facecolor='black', edgecolor='black',
         orientation='portrait', format=None, transparent=False, 
         bbox_inches='tight', pad_inches=0.0,metadata=None)
-    return figname
+    fig_2.savefig(figname_2, dpi=tft_dpi, facecolor='black', edgecolor='black',
+        orientation='portrait', format=None, transparent=False, 
+        bbox_inches='tight', pad_inches=0.0,metadata=None)
+    return figname_1,figname_2
     # --- --- --- --- --- 
     # --- --- --- --- --- 
+if __name__=='__main__':
+    print("[warning:] implement!")

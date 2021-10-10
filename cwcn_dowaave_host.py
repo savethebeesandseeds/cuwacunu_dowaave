@@ -236,10 +236,10 @@ class DOWAAVE:
         if('terminal' in kc.DOWAAVE_RENDER_MODE):
             self.state_terminal_update(v_key='w')
         if('gui' in kc.DOWAAVE_RENDER_MODE):
-            # self.tk_render.window.update()
             if(self.tk_render.window.focus_get() is not None):
                 self.state_gui_update(v_key='r')
                 # self._add_to_meesage_buffer_("{} {}".format(self.tk_render.window.focus_get(),self.tk_render.window.focus_get() is not None))
+            self.tk_render.window.update()
 
     # --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- 
     def _init_render_(self,r_mode=kc.DOWAAVE_RENDER_MODE):
@@ -299,18 +299,18 @@ class DOWAAVE:
             # print("v render time: {}".format(time.time()-stime))
     # --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- 
     def central_loop(self):
-        try:
-            while True:
+        while True:
+            try:
                 self.daotime=self.taotime
                 time.sleep(1/kc.FRAMES_PER_SECOND)
                 c_dwve.dowaave_capture()
                 c_dwve.dowaave_update()
                 self.taotime=time.time()
                 c_dwve.dowaave_render()
-        except Exception as e:
-            print("{}{}{}".format(kccc.RED,e,kccc.REGULAR))
-            c_dwve._close_render_()
-            c_dwve._close_capture_()
+            except Exception as e:
+                print("{}{}{}".format(kccc.RED,e,kccc.REGULAR))
+                c_dwve._close_render_()
+                c_dwve._close_capture_()
 if __name__=='__main__':
     # import ctypes
     # print(ctypes.__dict__)

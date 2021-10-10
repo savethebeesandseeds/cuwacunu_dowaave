@@ -181,6 +181,7 @@ class GAUSSIAN_WLOTER:
         self.wlot_itm=wlot_itm
         self.out_wlot_folder_itm=os.path.join(ON_FILE_WLOT_FOLDER,self.wlot_itm)
         self.itx_ctx=0
+        assert_folder(self.out_wlot_folder_itm)
         # --- --- ---
     def __purge_wlot_folder__(self):
         assert_folder(self.out_wlot_folder_itm)
@@ -219,9 +220,9 @@ class GAUSSIAN_WLOTER:
             ax.plot(truth_x.numpy(), truth_y.numpy(), 'g', linewidth=0.3)
             # ax.plot(truth_2_x.numpy(), truth_2_y.numpy(), 'y')
             # Plot predictive means as blue line
-            ax.plot(uwaabo_x.numpy(), uwaabo_y.mean.numpy(), 'b', linewidth=1.0)
+            ax.plot(uwaabo_x.numpy(), uwaabo_y.mean.numpy(), 'r', linewidth=0.6)
             # Plot training data as black stars
-            ax.plot(jkimyei_x.numpy(), jkimyei_y.numpy(), 'w', linewidth=0.8)
+            ax.plot(jkimyei_x.numpy(), jkimyei_y.numpy(), 'w', linewidth=0.8,alpha=0.6)
             # Shade between the lower and upper confidence bounds
             ax.fill_between(uwaabo_x.numpy(), lower.numpy(), upper.numpy(), alpha=0.2)
             # ax.set_ylim([-3, 3])
