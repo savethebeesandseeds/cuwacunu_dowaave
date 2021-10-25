@@ -4,6 +4,7 @@
 # powered by waajacu
 # --- --- --- --- ---
 import os
+import time
 import warnings
 warnings.filterwarnings("ignore")  # avoid printing out absolute paths
 # os.chdir("../../..")
@@ -139,17 +140,17 @@ def logging_fun(msg):
 # # --- --- --- --- --- 
 
 def train_tft(working_dataframe,
-    ALWAYS_SAVING_MODEL=dwvc.tft_ALWAYS_SAVING_MODEL,
-    ACTUAL_MODEL_PATH=dwvc.tft_ACTUAL_MODEL_PATH,#'lightning_logs/default/version_23/checkpoints/epoch=0-step=29.ckpt',
-    DO_TUNNIN=dwvc.tft_DO_TUNNIN,
-    JUST_LOAD=False, # meaning False when training is needed,
-    FIND_OPTMAL_LR=dwvc.tft_FIND_OPTMAL_LR,
-    LEARNING_RATE=dwvc.tft_LEARNING_RATE,
-    max_prediction_length=dwvc.tft_max_prediction_length,
-    max_encoder_length=dwvc.tft_max_encoder_length,
-    validation_porcentaje=dwvc.tft_validation_porcentaje,
-    n_epochs=dwvc.tft_n_epochs,
-    batch_size=dwvc.tft_batch_size): # from the data to the model .ckpt
+    ALWAYS_SAVING_MODEL,
+    ACTUAL_MODEL_PATH,#'lightning_logs/default/version_23/checkpoints/epoch=0-step=29.ckpt',
+    DO_TUNNIN,
+    JUST_LOAD, # meaning False when training is needed,
+    FIND_OPTMAL_LR,
+    LEARNING_RATE,
+    max_prediction_length,
+    max_encoder_length,
+    validation_porcentaje,
+    n_epochs,
+    batch_size): # from the data to the model .ckpt
 
     # --- --- --- --- --- BUILDING THE TEMPORAL FUSION TRANSFORMER
     validation_size = int((working_dataframe["INDEX"].max()-working_dataframe["INDEX"].min())*validation_porcentaje)
@@ -362,6 +363,7 @@ def train_tft(working_dataframe,
         os.system('cp {} {}'.format(ACTUAL_MODEL_PATH,ALWAYS_SAVING_MODEL))
         print('saving a copy of the trained model into : {}'.format(ALWAYS_SAVING_MODEL))
         # --- --- --- --- --- 
+    input("STOP! model is tranned!")
     tft_model = TemporalFusionTransformer.load_from_checkpoint(ALWAYS_SAVING_MODEL)
     # --- --- --- --- --- TEST THE MODEL
     actuals = torch.cat([y[0] for x, y in iter(val_dataloader)])
@@ -399,13 +401,23 @@ def train_tft(working_dataframe,
 # --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- 
 # --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- 
 # --- --- --- --- --- 
+def load_tft(model_path):
+    stime=time.time()
+    tft_model = TemporalFusionTransformer.load_from_checkpoint(model_path)
+    print("loaded file tft model in : {}".format(time.time()-stime))
+    return tft_model
 def relife_tft(
     working_dataframe,
-    model_path,
     max_encoder_length,
-    max_prediction_length): # from the data to the image
+    max_prediction_length,
+    indicator, # s/l, indicating short or long (just for label porpousses)
+    tft_model=None,
+    model_path=None,
+    ): # from the data to the image
     # --- --- --- --- --- LOAD THE MODEL
-    tft_model = TemporalFusionTransformer.load_from_checkpoint(model_path)
+    assert(tft_model or model_path), "relife_tft function requires to set tft_model or model_path"
+    if(tft_model is None):
+        tft_model=load_tft(model_path)
     # --- --- --- --- --- 
     # --- --- --- --- --- TEST THE MODEL ON NEW DATA
     encoder_data = working_dataframe.tail(max_encoder_length)
@@ -536,8 +548,8 @@ def relife_tft(
     assert_folder(wlot_path)
     # figname=os.path.join(wlot_path,"{}.png".format(working_dataframe['symbol'].iloc[-1]))
     # figname=os.path.join(wlot_path,"{}-{}.png".format(working_dataframe['symbol'].iloc[-1],uuid.uuid4()))
-    figname_1=os.path.join(wlot_path,"{}.0.png".format(working_dataframe['symbol'].iloc[-1]))
-    figname_2=os.path.join(wlot_path,"{}.1.png".format(working_dataframe['symbol'].iloc[-1]))
+    figname_1=os.path.join(wlot_path,"{}.{}0.png".format(working_dataframe['symbol'].iloc[-1],indicator))
+    figname_2=os.path.join(wlot_path,"{}.{}1.png".format(working_dataframe['symbol'].iloc[-1],indicator))
     fig_1.savefig(figname_1, dpi=tft_dpi, facecolor='black', edgecolor='black',
         orientation='portrait', format=None, transparent=False, 
         bbox_inches='tight', pad_inches=0.0,metadata=None)

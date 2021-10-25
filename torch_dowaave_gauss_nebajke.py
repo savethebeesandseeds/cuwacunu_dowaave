@@ -199,43 +199,46 @@ class GAUSSIAN_WLOTER:
         gf_path=os.path.join(self.out_wlot_folder_itm,"{}.{}".format(self.wlot_itm,"gif"))
         imageio.mimsave(gf_path,imags, format='GIF', duration=1)
         return gf_path
-    def __wlot_graph__(self,uwaabo_x,uwaabo_y,jkimyei_x,jkimyei_y,truth_x,truth_y):
+    def __wlot_graph__(self,uwaabo_x,uwaabo_y,jkimyei_x,jkimyei_y,truth_x,truth_y,ax_=None):
         with torch.no_grad():
             # Initialize plot
-            f, ax = plt.subplots(1, 1)
-            # f.canvas.manager.full_screen_toggle()
-            f.patch.set_facecolor((0,0,0))
-            ax.set_title("{} - {}".format(ax.get_title(),self.wlot_itm),color=(0,0,0))
-            ax.set_facecolor((0,0,0))
-            ax.spines['bottom'].set_color('black')
-            ax.spines['top'].set_color('black')
-            ax.spines['right'].set_color('black')
-            ax.spines['left'].set_color('black')
-            ax.xaxis.label.set_color('black')
-            ax.yaxis.label.set_color('black')
-            ax.tick_params(colors='black',which='both')
+            ax_flag=False
+            if(ax_ is None):
+                ax_flag=True
+                f_, ax_ = plt.subplots(1, 1)
+                # f_.canvas.manager.full_screen_toggle()
+                f_.patch.set_facecolor((0,0,0))
+            # ax_.set_title("{} - {}".format(ax_.get_title(),self.wlot_itm),color=(0,0,0))
+            ax_.set_facecolor((0,0,0))
+            ax_.spines['bottom'].set_color('black')
+            ax_.spines['top'].set_color('black')
+            ax_.spines['right'].set_color('black')
+            ax_.spines['left'].set_color('black')
+            ax_.xaxis.label.set_color('black')
+            ax_.yaxis.label.set_color('black')
+            ax_.tick_params(colors='black',which='both')
             # Get upper and lower confidence bounds
             lower, upper = uwaabo_y.confidence_region()
             # Plot future data
-            ax.plot(truth_x.numpy(), truth_y.numpy(), 'g', linewidth=0.3)
-            # ax.plot(truth_2_x.numpy(), truth_2_y.numpy(), 'y')
+            ax_.plot(truth_x.numpy(), truth_y.numpy(), 'g', linewidth=0.3)
+            # ax_.plot(truth_2_x.numpy(), truth_2_y.numpy(), 'y')
             # Plot predictive means as blue line
-            ax.plot(uwaabo_x.numpy(), uwaabo_y.mean.numpy(), 'r', linewidth=0.6)
+            ax_.plot(uwaabo_x.numpy(), uwaabo_y.mean.numpy(), 'r', linewidth=0.6)
             # Plot training data as black stars
-            ax.plot(jkimyei_x.numpy(), jkimyei_y.numpy(), 'w', linewidth=0.8,alpha=0.6)
+            ax_.plot(jkimyei_x.numpy(), jkimyei_y.numpy(), 'w', linewidth=0.8,alpha=0.6)
             # Shade between the lower and upper confidence bounds
-            ax.fill_between(uwaabo_x.numpy(), lower.numpy(), upper.numpy(), alpha=0.2)
-            # ax.set_ylim([-3, 3])
-            # ax.legend(['Kijtiyu Alliu, Uwaabo Mean, Unknown Alliu, Uwaabo Confidence'])
-            # # plt.show()
+            ax_.fill_between(uwaabo_x.numpy(), lower.numpy(), upper.numpy(), alpha=0.2)
+            # ax_.set_ylim([-3, 3])
+            # ax_.legend(['Kijtiyu Alliu, Uwaabo Mean, Unknown Alliu, Uwaabo Confidence'])
             # import uuid
-            # figname=os.path.join(self.out_wlot_folder_itm,"{}.{}-{}.png".format(self.wlot_itm,self.itx_ctx,uuid.uuid4()))
+            # # plt.show()
+            # ax_.set_title(self.wlot_itm,color="white")
             figname=os.path.join(self.out_wlot_folder_itm,"{}.{}.png".format(self.wlot_itm,self.itx_ctx))
-            plt.savefig(figname, dpi=gss_dpi, facecolor='black', edgecolor='black',
-                orientation='portrait', format=None, transparent=False, 
-                bbox_inches='tight', pad_inches=0.0,metadata=None)
         self.itx_ctx+=1
-        return f, ax, figname
+        if(ax_flag):
+            return f_, ax_, figname
+        else:
+            return None,ax_, figname
 # --- --- ---
 
 
@@ -275,78 +278,87 @@ def relife_gauss(
 
     truth_y=torch.FloatTensor(list(working_dataframe[active_dimension][:])+[np.nan]*c_future)
     # ---
-    if(True):
-        # --- --- ---
-        gw=GAUSSIAN_WLOTER(wlot_itm=active_coin)
-        # gw.__purge_wlot_folder__()
-        # --- --- ---
-        gwk=GAUSSIAN_WIKIMYEI()
-        if(False):
-            _idx_=0
-            while(int(((c_backlash if _idx_!=0 else 0)+_idx_)*c_horizon)<seq_size):
-                if(c_iterations<_idx_):
-                    break
+    # --- --- ---
+    gw=GAUSSIAN_WLOTER(wlot_itm=active_coin)
+    # gw.__purge_wlot_folder__()
+    # --- --- ---
+    gwk=GAUSSIAN_WIKIMYEI()
+    # --- --- ---
+    BUILD_GIF = False
+    if(BUILD_GIF):
+        _idx_=0
+        while(int(((c_backlash if _idx_!=0 else 0)+_idx_)*c_horizon)<seq_size):
+            if(c_iterations<_idx_):
+                break
+            # --- 
+            if(int((1+c_backlash+c_horizon_delta+_idx_)*c_horizon)<seq_size):
+                c_index_init=int(((c_backlash if _idx_!=0 else 0)+_idx_)*c_horizon)
+                c_index_final=int((1+c_backlash+c_horizon_delta+_idx_)*c_horizon)
+                c_index_horizon=int((1+c_backlash+_idx_)*c_horizon)
                 # --- 
-                if(int((1+c_backlash+c_horizon_delta+_idx_)*c_horizon)<seq_size):
-                    c_index_init=int(((c_backlash if _idx_!=0 else 0)+_idx_)*c_horizon)
-                    c_index_final=int((1+c_backlash+c_horizon_delta+_idx_)*c_horizon)
-                    c_index_horizon=int((1+c_backlash+_idx_)*c_horizon)
-                    # --- 
-                    uwaabo_x=truth_x[c_index_init: c_index_final]
-                    # --- 
-                    jkimyei_x=truth_x[c_index_init: c_index_horizon]
-                    jkimyei_y=truth_y[c_index_init: c_index_horizon]
-                    # --- 
-                    # print("STEP:",c_index_final,seq_size+100)
-                    # print("c_index_init: ",c_index_init)
-                    # print("c_index_final: ",c_index_final)
-                    # print("c_index_horizon: ",c_index_horizon)
-                    # --- 
-                else:
-                    # --- 
-                    uwaabo_x=truth_x[-c_horizon:]
-                    # --- 
-                    jkimyei_x=truth_x[-c_horizon-c_future:-c_future]
-                    jkimyei_y=truth_y[-c_horizon-c_future:-c_future]
-                    # --- 
-                    # print("uwaabo_x",uwaabo_x)
-                    # print("jkimyei_x",jkimyei_x)
-                    # print("jkimyei_y",jkimyei_y)
-                    # input("stop")
-                
-                gwk._set_knowledge_base_(jkimyei_x,jkimyei_y,learning_rate=learning_rate)
-                gwk._jkimyei_(jkimyei_x,jkimyei_y,learning_rate=learning_rate,training_iter=training_iter)
-                uwaabo_y=gwk._uwaabo_hash_(uwaabo_x)
-                # print(uwaabo_y.sample())
+                uwaabo_x=truth_x[c_index_init: c_index_final]
                 # --- 
-                f, ax, figname = gw.__wlot_graph__(uwaabo_x,uwaabo_y,jkimyei_x,jkimyei_y,truth_x,truth_y)
-                # --- --- ---
-                _idx_+=1
-            try:
-                gf_path = gw.__wlot_gif__()
-            except:
-                logging.error("[Unable to build gif]")
-            return gf_path
-        else:
-            uwaabo_x=truth_x[-c_horizon-c_future:]
-            # --- 
-            # --- --- --- (1)
-            jkimyei_x=truth_x[-c_horizon-c_future:-c_future]
-            jkimyei_y=truth_y[-c_horizon-c_future:-c_future]
-            # --- 
-            gwk._set_knowledge_base_(jkimyei_x,jkimyei_y,learning_rate=learning_rate)
-            gwk._jkimyei_(jkimyei_x,jkimyei_y,learning_rate=learning_rate,training_iter=training_iter)
-            uwaabo_y=gwk._uwaabo_hash_(uwaabo_x)
-            # --- 
-            f, ax, figname1 = gw.__wlot_graph__(uwaabo_x,uwaabo_y,jkimyei_x,jkimyei_y,truth_x,truth_y)
-            # --- --- --- (2)
-            jkimyei_x=truth_x[:-c_future]
-            jkimyei_y=truth_y[:-c_future]
-            # --- 
-            gwk._set_knowledge_base_(jkimyei_x,jkimyei_y,learning_rate=learning_rate)
-            gwk._jkimyei_(jkimyei_x,jkimyei_y,learning_rate=learning_rate,training_iter=training_iter)
-            uwaabo_y=gwk._uwaabo_hash_(uwaabo_x)
-            # --- 
-            f, ax, figname2 = gw.__wlot_graph__(uwaabo_x,uwaabo_y,jkimyei_x,jkimyei_y,truth_x,truth_y)
+                jkimyei_x=truth_x[c_index_init: c_index_horizon]
+                jkimyei_y=truth_y[c_index_init: c_index_horizon]
+                # --- 
+                # print("STEP:",c_index_final,seq_size+100)
+                # print("c_index_init: ",c_index_init)
+                # print("c_index_final: ",c_index_final)
+                # print("c_index_horizon: ",c_index_horizon)
+                # --- 
+            else:
+                # --- 
+                uwaabo_x=truth_x[-c_horizon:]
+                # --- 
+                jkimyei_x=truth_x[-c_horizon-c_future:-c_future]
+                jkimyei_y=truth_y[-c_horizon-c_future:-c_future]
+                # --- 
+                # print("uwaabo_x",uwaabo_x)
+                # print("jkimyei_x",jkimyei_x)
+                # print("jkimyei_y",jkimyei_y)
+                # input("stop")
             
-            return figname1, figname2
+            gwk._set_knowledge_base_(jkimyei_x,jkimyei_y,learning_rate=learning_rate)
+            gwk._jkimyei_(jkimyei_x,jkimyei_y,learning_rate=learning_rate,training_iter=training_iter)
+            uwaabo_y=gwk._uwaabo_hash_(uwaabo_x)
+            # print(uwaabo_y.sample())
+            # --- 
+            f, ax, figname = gw.__wlot_graph__(uwaabo_x,uwaabo_y,jkimyei_x,jkimyei_y,truth_x,truth_y)
+            # --- --- ---
+            _idx_+=1
+        try:
+            gf_path = gw.__wlot_gif__()
+        except:
+            logging.error("[Unable to build gif]")
+        return gf_path
+    else:
+        level_delta=5.0
+        # --- 
+        # --- 
+        uwaabo_x=truth_x[-c_horizon-c_future:]
+        # --- 
+        # --- --- --- (1)
+        jkimyei_x=truth_x[-c_horizon-c_future:-c_future]
+        jkimyei_y=truth_y[-c_horizon-c_future:-c_future]
+        # --- 
+        gwk._set_knowledge_base_(jkimyei_x,jkimyei_y,learning_rate=learning_rate)
+        gwk._jkimyei_(jkimyei_x,jkimyei_y,learning_rate=learning_rate,training_iter=training_iter)
+        uwaabo_y=gwk._uwaabo_hash_(uwaabo_x)
+        # --- 
+        f, ax, figname = gw.__wlot_graph__(uwaabo_x,uwaabo_y,jkimyei_x,jkimyei_y,truth_x,truth_y)
+        # --- --- --- (2)
+        jkimyei_x=truth_x[:-c_future]
+        jkimyei_y=truth_y[:-c_future] + level_delta
+        # --- 
+        gwk._set_knowledge_base_(jkimyei_x,jkimyei_y,learning_rate=learning_rate)
+        gwk._jkimyei_(jkimyei_x,jkimyei_y,learning_rate=learning_rate,training_iter=training_iter)
+        uwaabo_y=gwk._uwaabo_hash_(uwaabo_x)
+        # --- 
+        gw.__wlot_graph__(uwaabo_x,uwaabo_y,jkimyei_x,jkimyei_y,truth_x,truth_y,ax)
+
+        # figname=os.path.join(gw.out_wlot_folder_itm,"{}.{}-{}.png".format(active_coin,1,uuid.uuid4()))
+        f.savefig(figname, dpi=gss_dpi, facecolor='black', edgecolor='black',
+            orientation='portrait', format=None, transparent=False, 
+            bbox_inches='tight', pad_inches=0.0,metadata=None)
+
+        return figname, figname

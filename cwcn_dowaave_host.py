@@ -19,7 +19,9 @@ import socket
 import ast
 import tkinter as tk
 import io
-from PIL import Image
+from PIL import Image, ImageFile
+ImageFile.LOAD_TRUNCATED_IMAGES = True
+import threading
 # --- --- --- 
 import cwcn_dwve_host_config as kc
 from cwcn_dwve_host_config import CWCN_CURSOR as kccr
@@ -50,18 +52,16 @@ class TK_RENDER:
                     if('update' not in __bao_key and __bao_key not in ['ID']):
                         self.c_render[_bao['ID']][__bao_key] = _bao[__bao_key](self._dowaave._dwve_state,self.c_render[_bao['ID']])
                 except Exception as e:
-                    self._dowaave._add_to_meesage_buffer_("\n {} ERROR! : {} : {} {}".format(kccc.DANGER,__bao_key,e,kccc.REGULAR))
+                    self._dowaave._add_to_meesage_buffer_("\n {} ERROR init render graphics! : {} : {} {}".format(kccc.DANGER,__bao_key,e,kccc.REGULAR))
     def _update_render_graphs_(self):
-        # self._dowaave._dwve_state={}
-        # self._dowaave._dwve_state['x_vals']=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
         for _bao in kc.PLOT_RENDER_BAO:
             if(_bao['ID'] in list(self._dowaave._dwve_state.keys()) and self._dowaave._past_dwve_state[_bao['ID']] != self._dowaave._dwve_state[_bao['ID']]):
-                for __bao_key in list(_bao.keys()):
+                for __bao_key in list(_bao.keys())[::-1]:
                     try:
                         if('update' in __bao_key and __bao_key not in ['ID']):
                             self.c_render[_bao['ID']][__bao_key] = _bao[__bao_key](self._dowaave._dwve_state,self.c_render[_bao['ID']])
                     except Exception as e:
-                        self._dowaave._add_to_meesage_buffer_("\n {} ERROR! : {} : {} {}".format(kccc.DANGER,__bao_key,e,kccc.REGULAR))
+                        self._dowaave._add_to_meesage_buffer_("\n {} ERROR updating render graphs! : {} : {} {}".format(kccc.DANGER,__bao_key,e,kccc.REGULAR))
                 self._dowaave._past_dwve_state[_bao['ID']]=copy.deepcopy(self._dowaave._dwve_state[_bao['ID']])
                 # print(self._dowaave._past_dwve_state[_bao['ID']] != self._dowaave._dwve_state[_bao['ID']])
 class KBHit:
@@ -155,7 +155,7 @@ class DOWAAVE:
             )
         self._host=socket.gethostbyname(socket.gethostname())
         self._node='%20'.join(format(ord(XXX), 'b') for XXX in RCsi_CRYPT(self._host,':'.join(hex(uuid.getnode()).replace('0x', '')[i : i + 2] for i in range(0, 11, 2))))
-        self._symb='%20'.join(format(ord(XXX), 'b') for XXX in RCsi_CRYPT(self._host,kc.SYMBOL_INSTRUMENT))
+        # self._symb='%20'.join(format(ord(XXX), 'b') for XXX in RCsi_CRYPT(self._host,kc.SYMBOL_INSTRUMENT))
         self._init_capture_()
         self._command=''
         self._init_render_()
@@ -170,50 +170,64 @@ class DOWAAVE:
     def _close_capture_(self):
         self._kb.set_normal_term()
     def dowaave_capture(self):
-        if self._kb.kbhit():
-            self._last_pressed_kb = self._kb.getch()
-            self._act_pressed_kb=self._last_pressed_kb
-            self._last_pressed_backtime=time.time()
-            self._dwve_out.write('{}'.format(self._last_pressed_kb))
-            self._add_to_meesage_buffer_('user command : {}'.format(repr(self._last_pressed_kb)))
+        try:
+            if self._kb.kbhit():
+                self._last_pressed_kb = self._kb.getch()
+                self._act_pressed_kb=self._last_pressed_kb
+                self._last_pressed_backtime=time.time()
+                self._dwve_out.write('{}'.format(self._last_pressed_kb))
+                self._add_to_meesage_buffer_('user command : {}'.format(repr(self._last_pressed_kb)))
+        except Exception as e:
+            self._add_to_meesage_buffer_("\n {} ERROR on dowaave capture! : {} {}".format(kccc.DANGER,e,kccc.REGULAR))
     # --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- 
     def decode_cmd(self,v_key=None):
         if(v_key is None):
             __cmd='%20'.join(format(ord(XXX), 'b') for XXX in RCsi_CRYPT(self._host[::-1],kc.DOWAAVE_COMMAND_BAO[self._last_pressed_kb]))
         else:
             __cmd='%20'.join(format(ord(XXX), 'b') for XXX in RCsi_CRYPT(self._host[::-1],kc.DOWAAVE_COMMAND_BAO[v_key]))
-        __url="{}?symbol={},node={},command={}".format(kc.CLIENT_URL,self._symb,self._node,__cmd)
+        __url="{}?node={},command={}".format(kc.CLIENT_URL,self._node,__cmd)
         return __cmd,__url
     # --- --- --- --- --- 
     def state_terminal_update(self,v_key=None):
-        __cmd,__url=self.decode_cmd(v_key)
-        local_flx, local_headers = urllib.request.urlretrieve(__url)
-        with open(local_flx,encoding='utf-8') as __flx:
-            ujcamei_msg=[RCsi_CRYPT(__url,__) for __ in __flx.read().split("%20") if __!='']
-        self._dwve_state.update(dict([(__.split(":")[0],__.split(":")[1]) for __ in ujcamei_msg if __.split(":")[0] in kc.ACTIVE_ADHO_FIELD]))
+        try:
+            __cmd,__url=self.decode_cmd(v_key)
+            local_flx, local_headers = urllib.request.urlretrieve(__url)
+            with open(local_flx,encoding='utf-8') as __flx:
+                ujcamei_msg=[RCsi_CRYPT(__url,__) for __ in __flx.read().split("%20") if __!='']
+            self._dwve_state.update(dict([(__.split(":")[0],__.split(":")[1]) for __ in ujcamei_msg if __.split(":")[0] in kc.ACTIVE_ADHO_FIELD]))
+        except Exception as e:
+            self._add_to_meesage_buffer_("\n {} ERROR updating terminal state! : {} {}".format(kccc.DANGER,e,kccc.REGULAR))
     def state_gui_update(self,v_key=None):
-        __cmd,__url = self.decode_cmd(v_key)
-        local_flx, local_headers = urllib.request.urlretrieve(__url)
-        with open(local_flx,'rb') as __flx:
-            readed_load=__flx.read()
-        ujcamei_msg=[__ for __ in readed_load.decode('utf-8').split("%20") if __!='']
-        # print("ok! pass")
-        # print(len(ujcamei_msg))
-        img={}
-        for _c in ujcamei_msg:
-            __k = _c.split(':::::')[0]
-            __c = _c.split(':::::')[1]
-            c_decoded=str(RCsi_CRYPT(__url,"{}".format(__c)))
-            c_decoded=[chr(int(__)) for __ in c_decoded.split(',')]
-            c_decoded=''.join(c_decoded).encode('iso-8859-1')
-            c_stream = io.BytesIO(c_decoded)
-            img[__k]=Image.open(c_stream)
-            # img[__k].show()
-        self._dwve_state.update(img)
+        try:
+            __cmd,__url = self.decode_cmd(v_key)
+            local_flx, local_headers = urllib.request.urlretrieve(__url)
+            with open(local_flx,'rb') as __flx:
+                readed_load=__flx.read()
+            ujcamei_msg=[__ for __ in readed_load.decode('utf-8').split("%20") if __!='' and len(__.split(':::::'))==2]
+            # print("ok! pass")
+            # print(ujcamei_msg)
+            # input()
+            # print(len(ujcamei_msg))
+            img={}
+            for _c in ujcamei_msg:
+                __k = _c.split(':::::')[0]
+                __c = _c.split(':::::')[1]
+                c_decoded=str(RCsi_CRYPT(__url,"{}".format(__c)))
+                c_decoded=[chr(int(__)) for __ in c_decoded.split(',') if __!='']
+                c_decoded=''.join(c_decoded).encode('iso-8859-1')
+                c_stream = io.BytesIO(c_decoded)
+                img[__k]=Image.open(c_stream)
+                # img[__k].show()
+            self._dwve_state.update(img)
+        except Exception as e:
+            self._add_to_meesage_buffer_("\n {} ERROR updating gui state! : {} {}".format(kccc.DANGER,e,kccc.REGULAR))
     def proceed(self,v_key=None):
         # ... #FIXME encode
-        __cmd,__url=self.decode_cmd(v_key)
-        local_flx, local_headers = urllib.request.urlretrieve(__url)
+        try:
+            __cmd,__url=self.decode_cmd(v_key)
+            local_flx, local_headers = urllib.request.urlretrieve(__url)
+        except Exception as e:
+            self._add_to_meesage_buffer_("\n {} ERROR proceeding! : <{}> : {} {}".format(kccc.DANGER,v_key,e,kccc.REGULAR))
     # --- --- --- --- --- 
     def dowaave_update(self):
         if(kc.DOWAAVE_COMMAND_BAO[self._last_pressed_kb] != kc.DOWAAVE_COMMAND_BAO.default_factory()):
@@ -225,7 +239,7 @@ class DOWAAVE:
                 self.proceed()
             else:
                 __cmd='%20'.join(format(ord(XXX), 'b') for XXX in RCsi_CRYPT(self._host[::-1],kc.DOWAAVE_COMMAND_BAO[self._last_pressed_kb]))
-                __url="{}?symbol={},node={},command={}".format(kc.CLIENT_URL,self._symb,self._node,__cmd)
+                __url="{}?node={},command={}".format(kc.CLIENT_URL,self._node,__cmd)
                 contents = urllib.request.urlopen(__url).read().decode('utf-8')
                 # self._dwve_state=ast.literal_eval(RCsi_CRYPT(__url,''.join([chr(int(__,2)) for __ in contents.split('%20')])))
             self._last_pressed_kb='None'
@@ -244,54 +258,63 @@ class DOWAAVE:
     # --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- 
     def _init_render_(self,r_mode=kc.DOWAAVE_RENDER_MODE):
         # self._dwve_out.trucante(0) # clear out
-        if('terminal' in r_mode):
-            self._carrier_coord=[0,0] # x,y
-            for y_c in range(int(kc.DOWAAVE_RESOLUTION[1])):
-                self._dwve_out.write(kccr.NEW_LINE)
-                self._carrier_coord[1]+=kc.SCREEN_TO_DOWAAVE_SCALER[1]
-        if('gui' in r_mode):
-            self.tk_render=TK_RENDER(self)
-            self.tk_render._init_render_graphs_()
-            self.tk_render._update_render_graphs_()
+        try:
+            if('terminal' in r_mode):
+                self._carrier_coord=[0,0] # x,y
+                for y_c in range(int(kc.DOWAAVE_RESOLUTION[1])):
+                    self._dwve_out.write(kccr.NEW_LINE)
+                    self._carrier_coord[1]+=kc.SCREEN_TO_DOWAAVE_SCALER[1]
+            if('gui' in r_mode):
+                self.tk_render=TK_RENDER(self)
+                self.tk_render._init_render_graphs_()
+                self.tk_render._update_render_graphs_()
+        except Exception as e:
+            self._add_to_meesage_buffer_("\n {} ERROR initializing render! : {} {}".format(kccc.DANGER,e,kccc.REGULAR))
     def _close_render_(self):
-        if('terminal' in kc.DOWAAVE_RENDER_MODE):
-            self._dwve_out.write('{}'.format(kccc.REGULAR))
-            self._dwve_out.flush()
+        try:
+            if('terminal' in kc.DOWAAVE_RENDER_MODE):
+                self._dwve_out.write('{}'.format(kccc.REGULAR))
+                self._dwve_out.flush()
+        except Exception as e:
+            self._add_to_meesage_buffer_("\n {} ERROR closing render! : {} {}".format(kccc.DANGER,e,kccc.REGULAR))
     def dowaave_render(self):
         # self._dwve_out.write('{}'.format())
         if('terminal' in kc.DOWAAVE_RENDER_MODE):
-            def goto_zero_coord(other):
-                # other._dwve_out.write('{}'.format(kccr.LEFT*other._carrier_coord[0]))
-                other._dwve_out.write('{}'.format(kccr.CARRIER_RETURN))
-                other._dwve_out.write('{}'.format(kccr.UP*other._carrier_coord[1]))
-                other._carrier_coord=[0,0]
-            def goto_dwve_coord(other,x,y):
-                goto_zero_coord(other)
-                other._dwve_out.write('{}'.format(kccr.RIGHT*x*kc.DOWAAVE_TO_SCREEN_SCALER[0]))
-                other._dwve_out.write('{}'.format(kccr.DOWN*y*kc.DOWAAVE_TO_SCREEN_SCALER[1]))
-                other._carrier_coord=[x*kc.DOWAAVE_TO_SCREEN_SCALER[0],y*kc.DOWAAVE_TO_SCREEN_SCALER[1]]
-                other._dwve_out.flush()
-            def clear_screen_and_go_to_zero_coord(other):
-                other._carrier_coord=[0,0]
-                if os.name == 'nt':
-                    os.system("cls")
-                else:
-                    os.system("clear")
-                other._init_render_(r_mode='terminal')
-                goto_dwve_coord(other,kc.DOWAAVE_RESOLUTION[0],kc.DOWAAVE_RESOLUTION[1])
-                other._dwve_out.write('{}'.format("{}{}".format(KLMR_CLEAR_CARRIER,kccr.UP)*other._carrier_coord[1]))
-            # self._dwve_out.write(KLMR_CLEAR_CARRIER)
-            clear_screen_and_go_to_zero_coord(self)
-            for render_bao_key in list(kc.DOWAAVE_RENDER_BAO.keys()):
-                [x_coord,y_coord]=render_bao_key.split(',')
-                # for x_ctx in x_coord:
-                #     self._dwve_out.write()
-                goto_dwve_coord(self,x=int(x_coord),y=int(y_coord))
-                self._dwve_out.write('{}{}'.format(
-                    kc.DOWAAVE_RENDER_BAO[render_bao_key]['color'](self),
-                    kc.DOWAAVE_RENDER_BAO[render_bao_key]['lam'](self)
-                ))
-            self._dwve_out.flush()
+            try:
+                def goto_zero_coord(other):
+                    # other._dwve_out.write('{}'.format(kccr.LEFT*other._carrier_coord[0]))
+                    other._dwve_out.write('{}'.format(kccr.CARRIER_RETURN))
+                    other._dwve_out.write('{}'.format(kccr.UP*other._carrier_coord[1]))
+                    other._carrier_coord=[0,0]
+                def goto_dwve_coord(other,x,y):
+                    goto_zero_coord(other)
+                    other._dwve_out.write('{}'.format(kccr.RIGHT*x*kc.DOWAAVE_TO_SCREEN_SCALER[0]))
+                    other._dwve_out.write('{}'.format(kccr.DOWN*y*kc.DOWAAVE_TO_SCREEN_SCALER[1]))
+                    other._carrier_coord=[x*kc.DOWAAVE_TO_SCREEN_SCALER[0],y*kc.DOWAAVE_TO_SCREEN_SCALER[1]]
+                    other._dwve_out.flush()
+                def clear_screen_and_go_to_zero_coord(other):
+                    other._carrier_coord=[0,0]
+                    if os.name == 'nt':
+                        os.system("cls")
+                    else:
+                        os.system("clear")
+                    other._init_render_(r_mode='terminal')
+                    goto_dwve_coord(other,kc.DOWAAVE_RESOLUTION[0],kc.DOWAAVE_RESOLUTION[1])
+                    other._dwve_out.write('{}'.format("{}{}".format(KLMR_CLEAR_CARRIER,kccr.UP)*other._carrier_coord[1]))
+                # self._dwve_out.write(KLMR_CLEAR_CARRIER)
+                clear_screen_and_go_to_zero_coord(self)
+                for render_bao_key in list(kc.DOWAAVE_RENDER_BAO.keys()):
+                    [x_coord,y_coord]=render_bao_key.split(',')
+                    # for x_ctx in x_coord:
+                    #     self._dwve_out.write()
+                    goto_dwve_coord(self,x=int(x_coord),y=int(y_coord))
+                    self._dwve_out.write('{}{}'.format(
+                        kc.DOWAAVE_RENDER_BAO[render_bao_key]['color'](self),
+                        kc.DOWAAVE_RENDER_BAO[render_bao_key]['lam'](self)
+                    ))
+                self._dwve_out.flush()
+            except Exception as e:
+                self._add_to_meesage_buffer_("\n {} ERROR rendering terminal! : {} {}".format(kccc.DANGER,e,kccc.REGULAR))
         if('gui' in kc.DOWAAVE_RENDER_MODE):
             # if(self.tk_render.window.focus_get() is not None):
             # stime=time.time()
@@ -305,10 +328,13 @@ class DOWAAVE:
                 time.sleep(1/kc.FRAMES_PER_SECOND)
                 c_dwve.dowaave_capture()
                 c_dwve.dowaave_update()
+                # t=threading.Thread(target=)
+                # t.setDaemon(True)
+                # t.start()
                 self.taotime=time.time()
                 c_dwve.dowaave_render()
             except Exception as e:
-                print("{}{}{}".format(kccc.RED,e,kccc.REGULAR))
+                print("central loop error : {}{}{}".format(kccc.RED,e,kccc.REGULAR))
                 c_dwve._close_render_()
                 c_dwve._close_capture_()
 if __name__=='__main__':

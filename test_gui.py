@@ -155,6 +155,11 @@ def test_file_encode_image(c_path):
     # print(c_decoded)
     # img = Image.fromarray(c_decoded.astype('uint8'),'RGB')
     # img.show()
+
+class lvl_1:
+    a=1
+    class lvl_2:
+        aa=2
 if __name__ == '__main__':
     # master = tk.Tk()
 
@@ -170,7 +175,36 @@ if __name__ == '__main__':
 
     c_loaded=''
     print((repr(c_loaded)))
-    c_encoded=str(RCsi_CRYPT("avyeta","{}".format('avyeta')))
+    c_encoded=str(RCsi_CRYPT("niwaave","{}".format('niwaave')))
     print((repr(c_encoded)))
-    c_decoded=str(RCsi_CRYPT("avyeta","{}".format(c_encoded)))
+    c_decoded=str(RCsi_CRYPT("niwaave","{}".format(c_encoded)))
     print((repr(c_decoded)))
+
+    # print(lvl_1.a)
+    # print(lvl_1.__dict__['lvl_2'].aa)
+
+    # import cwcn_duuruva_piaabo
+
+    # measure_duuruva=cwcn_duuruva_piaabo.DUURUVA(_duuruva_vector_size=1,_wrapper_duuruva_normalize='norm', _d_name='measure_duuruva')
+
+    # import math
+    # import random
+    # len_seq = 1000
+    # x_measure = [_/len_seq for _ in range(len_seq)]
+    # def y_fun(x):
+    #     A = 1
+    #     bias = 1
+    #     freq = 25
+    #     return A*math.sin(2*math.pi*freq*x) + bias*x
+    # # def y_fun(x):
+    # #     return 
+    # y_measure = [y_fun(_) for _ in x_measure]
+
+    # d_measure = [measure_duuruva._duuruva_value_wrapper_(_) for _ in y_measure]
+
+    # import matplotlib.pyplot as plt
+
+    # plt.plot(x_measure,y_measure)
+    # plt.plot(x_measure,d_measure)
+    # plt.show()
+

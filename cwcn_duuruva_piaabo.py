@@ -35,6 +35,41 @@ class DUURUVA:
             self._duuruva.append(aux_d)
     def _is_duuruva_ready_(self):
         return dwvc.CWCN_DUURUVA_CONFIG.DUURUVA_READY_COUNT<=self._d_count
+    def _duuruva_inverse_value_wrapper_(self,c_vect):
+        for _v_idx in range(self._duuruva_vector_size):
+            if(self._duuruva_vector_size==1):
+                c_value = c_vect
+            else:
+                c_value = c_vect[_v_idx]
+            try:
+                if(self._wrapper_duuruva_std_or_norm == 'norm'):
+                    c_standar = (c_value)*(math.sqrt(self._duuruva[_v_idx]['variance']) + dwvc.CWCN_DUURUVA_CONFIG.MIN_STD) + self._duuruva[_v_idx]['mean']
+                elif(self._wrapper_duuruva_std_or_norm == 'std'):
+                    c_standar = (c_value - self._duuruva[_v_idx]['mean'])*(math.sqrt(self._duuruva[_v_idx]['variance']) + dwvc.CWCN_DUURUVA_CONFIG.MIN_STD) + self._duuruva[_v_idx]['mean']
+                elif(self._wrapper_duuruva_std_or_norm == 'mean'):
+                    c_standar = (c_value + self._duuruva[_v_idx]['mean'])
+                elif(self._wrapper_duuruva_std_or_norm == 'not'):
+                    c_standar = c_value
+                else:
+                    assert(False), "wrong wrapper_duuruva_std_or_norm configuration"
+            except Exception as e:
+                if(self._wrapper_duuruva_std_or_norm == 'not'):
+                    c_standar=c_value
+                else:
+                    c_standar=0
+                if(self._is_duuruva_ready_()):
+                    raise Exception("Error processing duuruva : {}".format(e))
+            # --- --- --- --- --- 
+            if(self._is_duuruva_ready_() or self._wrapper_duuruva_std_or_norm == 'not'):
+                if(self._duuruva_vector_size==1):
+                    c_vect = c_standar
+                else:
+                    c_vect[_v_idx] = c_standar
+            else:
+                if(self._duuruva_vector_size==1):
+                    c_vect = 0
+                else:
+                    c_vect[_v_idx] = 0
     def _duuruva_value_wrapper_(self,c_vect):
         self._d_count+=1
         _n = min(self._d_count,dwvc.CWCN_DUURUVA_CONFIG.DUURUVA_MAX_COUNT)
@@ -63,7 +98,7 @@ class DUURUVA:
                 if(self._wrapper_duuruva_std_or_norm == 'norm'):
                     c_standar = (c_value - self._duuruva[_v_idx]['mean'])/(math.sqrt(self._duuruva[_v_idx]['variance']) + dwvc.CWCN_DUURUVA_CONFIG.MIN_STD)
                 elif(self._wrapper_duuruva_std_or_norm == 'std'):
-                    c_standar = (c_value)/(math.sqrt(self._duuruva[_v_idx]['variance']) + dwvc.CWCN_DUURUVA_CONFIG.MIN_STD)
+                    c_standar = (c_value - self._duuruva[_v_idx]['mean'])/(math.sqrt(self._duuruva[_v_idx]['variance']) + dwvc.CWCN_DUURUVA_CONFIG.MIN_STD) + self._duuruva[_v_idx]['mean']
                 elif(self._wrapper_duuruva_std_or_norm == 'mean'):
                     c_standar = (c_value - self._duuruva[_v_idx]['mean'])
                 elif(self._wrapper_duuruva_std_or_norm == 'not'):

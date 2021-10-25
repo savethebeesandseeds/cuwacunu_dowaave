@@ -71,27 +71,60 @@ class EXCHANGE_INSTRUMENT:
                         loop.run_until_complete(self._subcribe_websocket_(_wss))
             # loop.close()
         else:
-            print_method("[start:] EXCHANGE INSTRUMENT [farm]")
+            assert(_is_farm or _is_front), "configure farm or front"
+            self._message_wrapper_=_message_wrapper_
+            if(_is_farm):
+                print_method("[start:] EXCHANGE INSTRUMENT [farm]")
+                assert(_message_wrapper_ is None), "do not configure _message_wrapper for farm"
+            if(_is_front):
+                print_method("[start:] EXCHANGE INSTRUMENT [front]")
+                assert(_message_wrapper_ is None), "do not configure _message_wrapper for front"
+            # --- --- --- --- 
             self.rest_client = RestClient(\
                 key=rcsi_utils.RCsi_CRYPT(communications_config.PLX_FUT_ADA_CONFIG.RCsi_KEY,communications_config.PLX_FUT_ADA_CONFIG.API_KEY), 
                 secret=rcsi_utils.RCsi_CRYPT(communications_config.PLX_FUT_ADA_CONFIG.RCsi_KEY,communications_config.PLX_FUT_ADA_CONFIG.API_SECRET), 
                 passphrase=rcsi_utils.RCsi_CRYPT(communications_config.PLX_FUT_ADA_CONFIG.RCsi_KEY,communications_config.PLX_FUT_ADA_CONFIG.API_PASS)
             )
             self.market_instrument = self.rest_client.market_api()
-            self._farm_files = {}
-            self._initialize_ticker_data_farm_()
-            self.ws_client = WsClient(\
-                self._farm_on_message_ if _message_wrapper_ is None else _message_wrapper_, 
-                key=rcsi_utils.RCsi_CRYPT(communications_config.PLX_FUT_ADA_CONFIG.RCsi_KEY,communications_config.PLX_FUT_ADA_CONFIG.API_KEY), 
-                secret=rcsi_utils.RCsi_CRYPT(communications_config.PLX_FUT_ADA_CONFIG.RCsi_KEY,communications_config.PLX_FUT_ADA_CONFIG.API_SECRET), 
-                passphrase=rcsi_utils.RCsi_CRYPT(communications_config.PLX_FUT_ADA_CONFIG.RCsi_KEY,communications_config.PLX_FUT_ADA_CONFIG.API_PASS)
-            )
+            # --- --- --- --- 
+            if(_is_front and _websocket_subs is not None and 'level2' in ''.join(_websocket_subs)):
+                self.market_l2_data={}
+                for _symb_itm in dwvcc.ACTIVE_SYMBOLS:
+                    self.market_l2_data[_symb_itm]={'ask':{},'bid':{},'sequence':None}
+                    c_data=self.market_instrument.get_l2_order_book(_symb_itm)
+                    self.market_l2_data[_symb_itm]['sequence']=c_data['sequence']
+                    for c_mrkt in c_data['asks']:
+                        self.market_l2_data[_symb_itm]['ask'][c_mrkt[0]]=c_mrkt[1] # ask are the sellers
+                    for c_mrkt in c_data['bids']:
+                        self.market_l2_data[_symb_itm]['bid'][c_mrkt[0]]=c_mrkt[1] # bid are the buyers
+                    time.sleep(2.5)
+            # --- --- --- --- 
+            if(_is_farm):
+                self._farm_files = {}
+                self._initialize_ticker_data_farm_()
+            # --- --- --- --- 
+            if(_is_farm):
+                self.ws_client = WsClient(\
+                    self._farm_on_message_, 
+                    key=rcsi_utils.RCsi_CRYPT(communications_config.PLX_FUT_ADA_CONFIG.RCsi_KEY,communications_config.PLX_FUT_ADA_CONFIG.API_KEY), 
+                    secret=rcsi_utils.RCsi_CRYPT(communications_config.PLX_FUT_ADA_CONFIG.RCsi_KEY,communications_config.PLX_FUT_ADA_CONFIG.API_SECRET), 
+                    passphrase=rcsi_utils.RCsi_CRYPT(communications_config.PLX_FUT_ADA_CONFIG.RCsi_KEY,communications_config.PLX_FUT_ADA_CONFIG.API_PASS)
+                )
+            if(_is_front):
+                self.ws_client = WsClient(\
+                    self.front_meesage_wrapper, 
+                    key=rcsi_utils.RCsi_CRYPT(communications_config.PLX_FUT_ADA_CONFIG.RCsi_KEY,communications_config.PLX_FUT_ADA_CONFIG.API_KEY), 
+                    secret=rcsi_utils.RCsi_CRYPT(communications_config.PLX_FUT_ADA_CONFIG.RCsi_KEY,communications_config.PLX_FUT_ADA_CONFIG.API_SECRET), 
+                    passphrase=rcsi_utils.RCsi_CRYPT(communications_config.PLX_FUT_ADA_CONFIG.RCsi_KEY,communications_config.PLX_FUT_ADA_CONFIG.API_PASS)
+                )
+            # --- --- --- --- 
             loop=asyncio.get_event_loop()
             loop.run_until_complete(self._connect_socket_())
-            if(_websocket_subs is not None):
-                for _wss in _websocket_subs:
-                    loop.run_until_complete(self._subcribe_websocket_(_wss))
-            if(not _is_front):
+            if(_is_front):
+                if(_websocket_subs is not None):
+                    for _wss in _websocket_subs:
+                        loop.run_until_complete(self._subcribe_websocket_(_wss))
+            if(_is_farm):
                 for _farm_itm in dwvcc.CWCN_FARM_CONFIG.FARM_SYMBOLS:
                     loop.run_until_complete(self._subcribe_websocket_('/contractMarket/ticker:{}'.format(_farm_itm)))
             # loop = asyncio.new_event_loop()
@@ -112,39 +145,43 @@ class EXCHANGE_INSTRUMENT:
     # --- --- --- --- 
     def _farm_on_message_(self,msg):
         # print(msg)
-        if(self._is_farm):
-            if "/contractMarket/ticker:" in msg['topic']:
+        if "/contractMarket/ticker:" in msg['topic']:
+            try:
+                with open(self._farm_files[msg['data']['symbol']],"a+") as _F: 
+                    _F.write("{},\n".format(msg['data']))
+                # print_method(f'Get {msg["data"]["symbol"]} Ticket :{msg["data"]} : unix time : {time.time()}')
+                sys.stdout.write(dwvcc.CWCN_CURSOR.CARRIER_RETURN)
+                sys.stdout.write(dwvcc.CWCN_CURSOR.CLEAR_LINE)
+                sys.stdout.write('[{}]; price: {}, time: {}'.format(msg['data']['symbol'],msg['data']['price'],msg['data']['ts']))
+                sys.stdout.write(dwvcc.CWCN_CURSOR.CARRIER_RETURN)
+                sys.stdout.flush()
+            except Exception as e:
+                print("error! {}".format(e))
+    def front_meesage_wrapper(self,msg):
+        if("/contractAccount/wallet" in msg['topic'] or "/contract/position:" in msg['topic']):
+            if("/contract/position:" in msg['topic']):
+                files_list = [msg['topic'].split(":")[1]]
+            else:
+                files_list = dwvcc.CWCN_FRONT_CONFIG.FRONT_WALLET_FOLDER
+            for c_symbol in files_list:
                 try:
-                    with open(self._farm_files[msg['data']['symbol']],"a+") as _F: 
-                        _F.write("{},\n".format(msg['data']))
-                    # print_method(f'Get {msg["data"]["symbol"]} Ticket :{msg["data"]} : unix time : {time.time()}')
-                    sys.stdout.write(dwvcc.CWCN_CURSOR.CARRIER_RETURN)
-                    sys.stdout.write(dwvcc.CWCN_CURSOR.CLEAR_LINE)
-                    sys.stdout.write('[{}]; price: {}, time: {}'.format(msg['data']['symbol'],msg['data']['price'],msg['data']['ts']))
-                    sys.stdout.write(dwvcc.CWCN_CURSOR.CARRIER_RETURN)
-                    sys.stdout.flush()
-                except Exception as e:
-                    print("error! {}".format(e))
-        if(self._is_front):
-            if("/contractAccount/wallet" in msg['topic'] or "/contract/position:" in msg['topic']):
-                try:
+                    c_file = "{}/WALLET.{}.poloniex_wallet_data".format(dwvcc.CWCN_FRONT_CONFIG.FRONT_WALLET_FOLDER,c_symbol)
                     c_wall={}
-                    if(os.path.isfile(dwvcc.CWCN_FARM_CONFIG.FRONT_WALLET_FILE)):
-                        with open(dwvcc.CWCN_FARM_CONFIG.FRONT_WALLET_FILE,"r",encoding='utf-8') as _F:
+                    if(os.path.isfile(c_file)):
+                        with open(c_file,"r",encoding='utf-8') as _F:
                             # c_wall = rcsi_utils.RCsi_CRYPT('shallowsecurewallet',_F.read())
                             readed_content=_F.read()
-                            print(readed_content)
+                            # print(readed_content)
                             c_decoded=[chr(int(__)) for __ in readed_content.split(',') if __!='']
                             c_decoded=''.join(c_decoded)
                             c_wall = rcsi_utils.RCsi_CRYPT('shallowsecurewallet',c_decoded)
-                            print("waka 1: {}".format(c_wall))
                             c_wall = c_wall[c_wall.find("{"):c_wall.rfind("}")+1]
-                            print("waka 2: {}".format(c_wall))
-                        print("waka 3: {}".format(c_wall))
+                        # print("[FRONT:] {}".format(c_wall))
                         c_wall = ast.literal_eval("{}".format(c_wall))
                     c_wall.update(msg['data'])
-                    # print("[UPDATE:] c_wall : {}".format(c_wall))
-                    with open(dwvcc.CWCN_FARM_CONFIG.FRONT_WALLET_FILE,"w+",encoding='utf-8') as _F:
+                    # print("[UPDATE:] front : {}".format(json.dumps(c_wall,sort_keys=True,indent=4)))
+                    print("[UPDATE:] front / WALLET : {}".format(c_wall))
+                    with open(c_file,"w+",encoding='utf-8') as _F:
                         # _F.write("{}".format(rcsi_utils.RCsi_CRYPT('shallowsecurewallet','{}'.format(c_wall))))
                         c_encoded = "{}".format(rcsi_utils.RCsi_CRYPT('shallowsecurewallet','{}'.format(c_wall)))
                         c_encoded = ','.join([str(ord(__)) for __ in c_encoded])
@@ -157,7 +194,48 @@ class EXCHANGE_INSTRUMENT:
                     sys.stdout.write(dwvcc.CWCN_CURSOR.CARRIER_RETURN)
                     sys.stdout.flush()
                 except Exception as e:
-                    print("FORNT ERROR! {}".format(e))
+                    print("FORNT ERROR! (WALLET) {}".format(e))
+                    # open(c_file,"w").close()
+                    os.system('rm {}'.format(c_file))
+        elif('/contractMarket/level2:' in msg['topic']):
+            try:
+                # s_time=time.time()
+                _symb_itm=msg['topic'].split(":")[1]
+                # assert(self.market_l2_data[_symb_itm]['sequence']==msg['data']['sequence']-1), "SEQUENCE ERROR"
+                self.market_l2_data[_symb_itm]['sequence']=msg['data']['sequence']
+                c_change=msg['data']['change'].split(',')
+                if(c_change[1]=='buy'):
+                    if(c_change[2]!='0'):
+                        self.market_l2_data[_symb_itm]['bid'][c_change[0]]=c_change[2]
+                    else:
+                        self.market_l2_data[_symb_itm]['bid'].pop(c_change[0],None)
+                elif(c_change[1]=='sell'):
+                    if(c_change[2]!='0'):
+                        self.market_l2_data[_symb_itm]['ask'][c_change[0]]=c_change[2]
+                    else:
+                        self.market_l2_data[_symb_itm]['ask'].pop(c_change[0],None)
+                else:
+                    aux_str="CHANGE ERROR {}".format(msg)
+                    assert(False), aux_str                
+                print("[UPDATE:] front / MARKET_L2 / {} : {}".format(_symb_itm,c_change))
+                c_file = "{}/MRKT.{}.poloniex_l2_mrkt_data".format(dwvcc.CWCN_FRONT_CONFIG.FRONT_MARKET_FOLDER,_symb_itm)
+                # print(self.market_l2_data[_symb_itm])
+                with open(c_file,"w+",encoding='utf-8') as _F:
+                    c_encoded = "{}".format(rcsi_utils.RCsi_CRYPT('shallowsecuremarket','{}'.format(self.market_l2_data[_symb_itm])))
+                    c_encoded = ','.join([str(ord(__)) for __ in c_encoded])
+                    _F.write(c_encoded)
+                # print("FRONT / MARKET_L2 : encoding exe time : {} s".format(time.time()-s_time))
+            except Exception as e:
+                print("FRONT ERROR! (MARKET) / {} : {}".format(_symb_itm,e))
+                c_data=self.market_instrument.get_l2_order_book(_symb_itm)
+                self.market_l2_data[_symb_itm]={'ask':{},'bid':{},'sequence':None}
+                self.market_l2_data[_symb_itm]['sequence']=c_data['sequence']
+                for c_mrkt in c_data['asks']:
+                    self.market_l2_data[_symb_itm]['ask'][c_mrkt[0]]=c_mrkt[1] # ask are the sellers
+                for c_mrkt in c_data['bids']:
+                    self.market_l2_data[_symb_itm]['bid'][c_mrkt[0]]=c_mrkt[1] # bid are the buyers
+        else:
+            print("FRONT UNKNOWN MSG: {}".format(msg))
     # def _on_message_(self,msg):
     #     if msg['topic'] == f'/contract/instrument:{dwvcc.CWCN_INSTRUMENT_CONFIG.SYMBOL}':
     #         print_method(f'Get {dwvcc.CWCN_INSTRUMENT_CONFIG.SYMBOL} Index Price: {msg["data"]} : unix time : {time.time()}')
@@ -182,9 +260,10 @@ class EXCHANGE_INSTRUMENT:
                 with open(itm_file_path,"r") as c_file:
                     lines=c_file.readlines()
                     with open(bkup_itm_file_path,"a+") as bkup_itm_file:
-                        bkup_itm_file.write("-------------------------------------------------------\n")
+                        bkup_itm_file.write(dwvcc.CWCN_FARM_CONFIG.BKUP_MARKER)
                         for _line in lines:
                             bkup_itm_file.write("{}".format(_line))
+                os.system('rm {}'.format(itm_file_path))
             self._farm_files[_farm_itm]=itm_file_path
             history=self.market_instrument.get_trade_history(_farm_itm)
             history=history[::-1]
@@ -993,7 +1072,6 @@ if __name__=='__main__':
     # --- --- --- ---
     # SYMBOL = 'BTCUSDTPERP'
     # --- --- --- --- 
-    import time
     # --- --- --- --- 
     # c_trade_instrument = EXCHANGE_INSTRUMENT(_is_farm=True)
     
